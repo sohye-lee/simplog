@@ -9,10 +9,11 @@ const LS_KEY = 'simplelog.state.v1';
 export function defaultState(): AppState {
   return {
     entries: SEED,
-    currency: 'KRW',
+    currency: 'USD',
     categories: DEFAULT_CATEGORIES,
     subcats: SUBCATEGORIES,
     catMode: 'twolevel',
+    recurring: [],
     page: 'overview',
   };
 }

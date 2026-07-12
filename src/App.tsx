@@ -1,20 +1,24 @@
-// SimpleLog — app shell, nav routing, month navigation, state + persistence.
+// SimpleLog — app shell, auth gate, nav routing, month navigation,
+// state + persistence + sync.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from './components/Button';
 import { Icon } from './components/Icon';
 import type { IconName } from './components/Icon';
 import { MonthStepper } from './kit/pieces';
 import { AddSheet } from './kit/AddSheet';
+import { SignInScreen } from './kit/SignInScreen';
 import { OverviewPage } from './pages/Overview';
 import { EntriesPage } from './pages/Entries';
 import { ExportPage } from './pages/Export';
 import { SettingsPage } from './pages/Settings';
-import type { AppState, Entry, Page } from './lib/types';
+import type { AppState, Entry, Freq, Page, RecurringRule } from './lib/types';
 import { loadState, saveState, defaultState } from './lib/storage';
-import { monthOf, monthLabel, shiftMonth, thisMonth } from './lib/months';
+import { monthOf, monthLabel, shiftMonth, thisMonth, todayISO } from './lib/months';
 import { exportMonth, exportBackup, parseBackup } from './lib/export';
 import type { ExportFormat } from './lib/export';
 import { enqueueAdd, enqueueDelete, markSettingsChanged, fullSync } from './lib/sync';
+import { materialize, entryIdFor } from './lib/recurring';
+import { supabase } from './lib/supabase';
 
 const NAV: Array<{ id: Page; label: string; icon: IconName }> = [
   { id: 'overview', label: 'Overview', icon: 'home' },
@@ -57,20 +61,20 @@ function Logo() {
   );
 }
 
+type AuthPhase = 'loading' | 'out' | 'in' | 'local';
+
 export default function App() {
   const [st, setSt] = useState<AppState>(loadState);
   const [month, setMonth] = useState<string>(thisMonth);
   const [sheet, setSheet] = useState(false);
-  const { entries, currency, categories, subcats, catMode, page } = st;
-  const twoLevel = catMode === 'twolevel';
+  const [auth, setAuth] = useState<AuthPhase>(supabase ? 'loading' : 'local');
+  const { entries, currency, categories, subcats, recurring, page } = st;
 
   useEffect(() => { saveState(st); }, [st]);
 
   const patch = (p: Partial<AppState>) => setSt((s) => ({ ...s, ...p }));
 
   // ── Sync ────────────────────────────────────────────────────────
-  // Offline-first: every change lands in localStorage immediately and
-  // is queued; runSync pushes the queue and pulls fresh server state.
   const stRef = useRef(st);
   useEffect(() => { stRef.current = st; }, [st]);
 
@@ -86,11 +90,36 @@ export default function App() {
   }, [runSync]);
 
   useEffect(() => {
-    runSync().catch(() => {});
     const onOnline = () => { runSync().catch(() => {}); };
     window.addEventListener('online', onOnline);
     return () => window.removeEventListener('online', onOnline);
   }, [runSync]);
+
+  // ── Auth gate ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setAuth(data.session ? 'in' : 'out'));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      setAuth(session ? 'in' : 'out');
+      if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) runSync().catch(() => {});
+      if (event === 'SIGNED_OUT') {
+        // Leave no local trace: the next sign-in pulls from the server.
+        setSt({ ...defaultState(), entries: [], recurring: [] });
+        setMonth(thisMonth());
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [runSync]);
+
+  // ── Recurring: materialize due entries whenever rules change ────
+  useEffect(() => {
+    const { newEntries, rules, changed } = materialize(recurring, todayISO());
+    if (!changed) return;
+    setSt((s) => ({ ...s, entries: [...newEntries, ...s.entries.filter((e) => !newEntries.some((n) => n.id === e.id))], recurring: rules }));
+    newEntries.forEach(enqueueAdd);
+    markSettingsChanged();
+    scheduleSync();
+  }, [recurring, scheduleSync]);
 
   const changeSettings = (p: Partial<AppState>) => { patch(p); markSettingsChanged(); scheduleSync(); };
   const mutateSettings = (fn: (s: AppState) => AppState) => { setSt(fn); markSettingsChanged(); scheduleSync(); };
@@ -112,8 +141,19 @@ export default function App() {
   }, [monthEntries]);
   const sorted = useMemo(() => [...monthEntries].sort((a, b) => (a.date < b.date ? 1 : -1)), [monthEntries]);
 
-  const addEntry = (e: Entry) => {
-    setSt((s) => ({ ...s, entries: [e, ...s.entries] }));
+  const addEntry = (e: Entry, repeat?: Freq) => {
+    if (repeat) {
+      const rule: RecurringRule = {
+        id: e.id, kind: e.kind, amount: e.amount, category: e.category,
+        note: e.note, freq: repeat, anchor: e.date, lastGen: 0,
+      };
+      if (e.sub) rule.sub = e.sub;
+      e = { ...e, id: entryIdFor(rule, 0) };   // deterministic id for occurrence 0
+      setSt((s) => ({ ...s, entries: [e, ...s.entries], recurring: [...s.recurring, rule] }));
+      markSettingsChanged();                    // rules travel with settings
+    } else {
+      setSt((s) => ({ ...s, entries: [e, ...s.entries] }));
+    }
     setMonth(monthOf(e.date));   // jump to the month the entry landed in
     enqueueAdd(e);
     scheduleSync();
@@ -140,6 +180,14 @@ export default function App() {
     reader.readAsText(file);
   };
 
+  // ── Gate ────────────────────────────────────────────────────────
+  if (auth === 'loading') {
+    return <div style={{ minHeight: '100dvh', background: 'var(--surface-page)' }} />;
+  }
+  if (auth === 'out') {
+    return <SignInScreen />;
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--surface-page)' }}>
       <header style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-card)', position: 'sticky', top: 0, zIndex: 10 }}>
@@ -159,7 +207,10 @@ export default function App() {
         </div>
 
         {page === 'overview' && (
-          <OverviewPage income={income} spent={spent} byCategory={byCategory} bySubcat={bySubcat} twoLevel={twoLevel} recent={sorted.slice(0, 4)} currency={currency} onSeeAll={() => patch({ page: 'entries' })} onDelete={del} />
+          <OverviewPage income={income} spent={spent} byCategory={byCategory} bySubcat={bySubcat}
+            categories={categories} monthEntries={monthEntries} month={month}
+            recent={sorted.slice(0, 4)} currency={currency}
+            onSeeAll={() => patch({ page: 'entries' })} onDelete={del} />
         )}
         {page === 'entries' && (
           <EntriesPage entries={monthEntries} categories={categories} currency={currency} onDelete={del} />
@@ -172,14 +223,25 @@ export default function App() {
             currency={currency}
             categories={categories}
             subcats={subcats}
-            catMode={catMode}
-            onCatMode={(m) => changeSettings({ catMode: m })}
+            recurring={recurring}
             onCurrency={(c) => changeSettings({ currency: c })}
             onAddCategory={(c) => mutateSettings((s) => ({ ...s, categories: [...s.categories, c], subcats: { ...s.subcats, [c]: [] } }))}
             onRemoveCategory={(c) => mutateSettings((s) => { const sc = { ...s.subcats }; delete sc[c]; return { ...s, categories: s.categories.filter((x) => x !== c), subcats: sc }; })}
+            onReorderCategories={(next) => changeSettings({ categories: next })}
             onAddSub={(cat, sub) => mutateSettings((s) => ({ ...s, subcats: { ...s.subcats, [cat]: [...(s.subcats[cat] || []), sub] } }))}
             onRemoveSub={(cat, sub) => mutateSettings((s) => ({ ...s, subcats: { ...s.subcats, [cat]: (s.subcats[cat] || []).filter((x) => x !== sub) } }))}
-            onReset={() => { setSt({ ...defaultState(), catMode, page: 'settings' }); setMonth(thisMonth()); }}
+            onRemoveRecurring={(id) => mutateSettings((s) => ({ ...s, recurring: s.recurring.filter((r) => r.id !== id) }))}
+            onReset={() => {
+              // Reset the account, not just this device: tombstone every
+              // current entry on the server, then upload the fresh sample.
+              stRef.current.entries.forEach((e) => enqueueDelete(e.id));
+              const fresh = defaultState();
+              fresh.entries.forEach((e) => enqueueAdd(e));
+              setSt({ ...fresh, page: 'settings' });
+              setMonth(thisMonth());
+              markSettingsChanged();
+              scheduleSync();
+            }}
             onBackup={() => exportBackup(stRef.current)}
             onImport={onImport}
             onSyncNow={runSync}
@@ -193,7 +255,7 @@ export default function App() {
         </div>
       )}
 
-      <AddSheet open={sheet} onClose={() => setSheet(false)} onAdd={addEntry} categories={categories} subcats={subcats} currency={currency} twoLevel={twoLevel} />
+      <AddSheet open={sheet} onClose={() => setSheet(false)} onAdd={addEntry} categories={categories} subcats={subcats} currency={currency} entries={entries} />
     </div>
   );
 }

@@ -1,28 +1,34 @@
 import { useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Select } from '../components/Select';
-import { SegmentedControl } from '../components/SegmentedControl';
 import { Icon } from '../components/Icon';
+import { Amount } from '../components/Amount';
 import { SectionHeader } from '../kit/pieces';
 import { SyncCard } from '../kit/SyncCard';
-import type { CatMode, Currency } from '../lib/types';
+import type { Currency, RecurringRule } from '../lib/types';
+import { nextOccurrence } from '../lib/recurring';
+import { todayISO } from '../lib/months';
 
 // A pill chip with an ✕ remove button.
-function Chip({ label, onRemove, tone }: { label: string; onRemove: () => void; tone?: 'sub' }) {
+function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 26, padding: '0 6px 0 10px', borderRadius: 'var(--radius-pill)', background: tone === 'sub' ? 'var(--surface-card)' : 'var(--surface-inset)', border: '1px solid var(--border)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 26, padding: '0 6px 0 10px', borderRadius: 'var(--radius-pill)', background: 'var(--surface-card)', border: '1px solid var(--border)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
       {label}
       <button onClick={onRemove} aria-label={'Remove ' + label} style={{ display: 'inline-flex', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}><Icon name="x" size={13} /></button>
     </span>
   );
 }
 
-// One category with an expandable subcategory editor (two-level mode).
-function CategoryEditorRow({ cat, subs, onRemoveCategory, onAddSub, onRemoveSub }: {
+// One category row: drag handle (order = importance) + expandable
+// subcategory editor.
+function CategoryEditorRow({ cat, subs, dragging, onHandleDown, onRemoveCategory, onAddSub, onRemoveSub }: {
   cat: string;
   subs: string[];
+  dragging: boolean;
+  onHandleDown: (e: ReactPointerEvent) => void;
   onRemoveCategory: (cat: string) => void;
   onAddSub: (cat: string, sub: string) => void;
   onRemoveSub: (cat: string, sub: string) => void;
@@ -31,9 +37,22 @@ function CategoryEditorRow({ cat, subs, onRemoveCategory, onAddSub, onRemoveSub 
   const [val, setVal] = useState('');
   const addSub = () => { const v = val.trim(); if (v && !subs.includes(v)) { onAddSub(cat, v); setVal(''); } };
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--surface-sunken)' }}>
-        <button onClick={() => setOpen((o) => !o)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)', padding: 0 }}>
+    <div style={{
+      border: `1px solid ${dragging ? 'var(--border-focus)' : 'var(--border)'}`,
+      borderRadius: 'var(--radius-md)', overflow: 'hidden',
+      boxShadow: dragging ? 'var(--shadow-md)' : 'none',
+      opacity: dragging ? 0.95 : 1,
+      background: 'var(--surface-card)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '10px 12px', background: 'var(--surface-sunken)' }}>
+        <span
+          onPointerDown={onHandleDown}
+          style={{ display: 'inline-flex', color: 'var(--text-muted)', cursor: 'grab', padding: '6px 6px 6px 0', touchAction: 'none' }}
+          aria-label={'Reorder ' + cat}
+        >
+          <Icon name="grip" size={15} />
+        </span>
+        <button onClick={() => setOpen((o) => !o)} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)', padding: 0 }}>
           <span style={{ display: 'inline-flex', color: 'var(--text-muted)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms' }}><Icon name="chevron-right" size={14} /></span>
           {cat}
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 400 }}>{subs.length} sub</span>
@@ -43,7 +62,7 @@ function CategoryEditorRow({ cat, subs, onRemoveCategory, onAddSub, onRemoveSub 
       {open && (
         <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {subs.map((s) => <Chip key={s} label={s} tone="sub" onRemove={() => onRemoveSub(cat, s)} />)}
+            {subs.map((s) => <Chip key={s} label={s} onRemove={() => onRemoveSub(cat, s)} />)}
             {subs.length === 0 && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>No subcategories yet.</span>}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -61,36 +80,60 @@ interface SettingsPageProps {
   currency: Currency;
   categories: string[];
   subcats: Record<string, string[]>;
-  catMode: CatMode;
-  onCatMode: (mode: CatMode) => void;
+  recurring: RecurringRule[];
   onCurrency: (currency: Currency) => void;
   onAddCategory: (cat: string) => void;
   onRemoveCategory: (cat: string) => void;
+  onReorderCategories: (categories: string[]) => void;
   onAddSub: (cat: string, sub: string) => void;
   onRemoveSub: (cat: string, sub: string) => void;
+  onRemoveRecurring: (id: number) => void;
   onReset: () => void;
   onBackup: () => Promise<void>;
   onImport: (file: File) => void;
   onSyncNow: () => Promise<void>;
 }
 
-export function SettingsPage({ currency, categories, subcats, catMode, onCatMode, onCurrency, onAddCategory, onRemoveCategory, onAddSub, onRemoveSub, onReset, onBackup, onImport, onSyncNow }: SettingsPageProps) {
+export function SettingsPage({ currency, categories, subcats, recurring, onCurrency, onAddCategory, onRemoveCategory, onReorderCategories, onAddSub, onRemoveSub, onRemoveRecurring, onReset, onBackup, onImport, onSyncNow }: SettingsPageProps) {
   const [newCat, setNewCat] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const add = () => { const v = newCat.trim(); if (v && !categories.includes(v)) { onAddCategory(v); setNewCat(''); } };
-  const twoLevel = catMode === 'twolevel';
+
+  // ── Drag-to-reorder (pointer events → works for mouse + touch) ──
+  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  const handleDown = (i: number) => (e: ReactPointerEvent) => {
+    e.preventDefault();
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* synthetic events */ }
+    setDragIdx(i);
+  };
+  const handleMove = (e: ReactPointerEvent) => {
+    if (dragIdx === null) return;
+    const y = e.clientY;
+    for (let j = 0; j < categories.length; j++) {
+      if (j === dragIdx) continue;
+      const r = rowRefs.current[j]?.getBoundingClientRect();
+      if (!r) continue;
+      const mid = r.top + r.height / 2;
+      if ((j < dragIdx && y < mid) || (j > dragIdx && y > mid)) {
+        const next = [...categories];
+        const [moved] = next.splice(dragIdx, 1);
+        next.splice(j, 0, moved);
+        onReorderCategories(next);
+        setDragIdx(j);
+        break;
+      }
+    }
+  };
+  const handleUp = () => setDragIdx(null);
+
+  const today = todayISO();
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <SyncCard onSyncNow={onSyncNow} />
-      <Card padding="md">
-        <SectionHeader title="Category style" />
-        <SegmentedControl options={[{ value: 'simple', label: 'Simple' }, { value: 'twolevel', label: 'Two-level' }]} value={catMode} onChange={(m) => onCatMode(m as CatMode)} fullWidth />
-        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.5 }}>
-          {catMode === 'simple'
-            ? 'One flat list. Fastest to log — pick a category and go. Details live in the note.'
-            : 'A subcategory under each category (Food › Coffee). More precise, one extra tap per entry. Overview rows expand to show sub-totals.'}
-        </div>
-      </Card>
+
       <Card padding="md">
         <SectionHeader title="Currency" />
         <Select value={currency} onChange={(e) => onCurrency(e.target.value as Currency)} options={[
@@ -103,24 +146,64 @@ export function SettingsPage({ currency, categories, subcats, catMode, onCatMode
       </Card>
 
       <Card padding="md">
-        <SectionHeader title={twoLevel ? 'Categories & subcategories' : 'Categories'} right={<span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{categories.length}</span>} />
-        {twoLevel ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-            {categories.map((c) => (
-              <CategoryEditorRow key={c} cat={c} subs={subcats[c] || []} onRemoveCategory={onRemoveCategory} onAddSub={onAddSub} onRemoveSub={onRemoveSub} />
-            ))}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-            {categories.map((c) => <Chip key={c} label={c} onRemove={() => onRemoveCategory(c)} />)}
-          </div>
-        )}
+        <SectionHeader title="Categories" right={<span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>drag ≡ to set importance</span>} />
+        <div
+          style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}
+          onPointerMove={handleMove}
+          onPointerUp={handleUp}
+          onPointerCancel={handleUp}
+        >
+          {categories.map((c, i) => (
+            <div key={c} ref={(el) => { rowRefs.current[i] = el; }}>
+              <CategoryEditorRow
+                cat={c}
+                subs={subcats[c] || []}
+                dragging={dragIdx === i}
+                onHandleDown={handleDown(i)}
+                onRemoveCategory={onRemoveCategory}
+                onAddSub={onAddSub}
+                onRemoveSub={onRemoveSub}
+              />
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>
+          The order here is the order on the Overview breakdown — most important first.
+        </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <div style={{ flex: 1 }}>
             <Input label="Add category" placeholder="e.g. Subscriptions" value={newCat} onChange={(e) => setNewCat(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} />
           </div>
           <Button variant="secondary" onClick={add} leadingIcon={<Icon name="plus" size={16} />} style={{ height: 44 }}>Add</Button>
         </div>
+      </Card>
+
+      <Card padding="md">
+        <SectionHeader title="Recurring" right={<span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{recurring.length || ''}</span>} />
+        {recurring.length === 0 ? (
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+            No recurring entries. Choose "Repeats monthly / weekly" when adding an entry — rent, salary, subscriptions log themselves.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {recurring.map((r) => (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px', borderBottom: '1px solid var(--ink-100)' }}>
+                <span style={{ color: 'var(--text-muted)', display: 'inline-flex' }}><Icon name="repeat" size={15} /></span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 'var(--text-md)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.note}</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>
+                    {r.category}{r.sub ? ` › ${r.sub}` : ''} · {r.freq} · next {nextOccurrence(r, today)}
+                  </div>
+                </div>
+                <Amount value={r.kind === 'expense' ? -r.amount : r.amount} size="sm" signed={r.kind === 'income'} emphasis={r.kind === 'income' ? 'accent' : 'normal'} currency={currency} />
+                <button onClick={() => onRemoveRecurring(r.id)} aria-label={'Stop recurring ' + r.note} style={{ display: 'inline-flex', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><Icon name="trash-2" size={15} /></button>
+              </div>
+            ))}
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 10 }}>
+              Removing a rule stops future entries — already-logged ones stay.
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card padding="md">

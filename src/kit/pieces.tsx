@@ -42,16 +42,20 @@ export function SummaryStrip({ income, spent, currency }: { income: number; spen
 }
 
 // ── Category breakdown with proportional bars ────────────────────
-// twoLevel: parent rows expand to reveal subcategory amounts.
-export function CategoryBreakdown({ byCategory, bySubcat, total, currency, twoLevel }: {
+// Rows follow the user's category order (Settings — importance),
+// not the amount. twoLevel: parent rows expand to reveal subcategory
+// amounts.
+export function CategoryBreakdown({ byCategory, bySubcat, total, currency, twoLevel, order = [] }: {
   byCategory: Record<string, number>;
   bySubcat: Record<string, Record<string, number>>;
   total: number;
   currency: Currency;
   twoLevel: boolean;
+  order?: string[];
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
-  const rows = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+  const rank = (cat: string) => { const i = order.indexOf(cat); return i === -1 ? order.length : i; };
+  const rows = Object.entries(byCategory).sort((a, b) => rank(a[0]) - rank(b[0]) || b[1] - a[1]);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {rows.map(([cat, amt]) => {

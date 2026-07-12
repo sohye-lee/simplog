@@ -13,11 +13,26 @@ export interface Entry {
   date: string;          // 'YYYY-MM-DD'
 }
 
+export type Freq = 'monthly' | 'weekly';
+
+export interface RecurringRule {
+  id: number;            // Date.now() when the rule was created
+  kind: Kind;
+  amount: number;
+  category: string;
+  sub?: string;
+  note: string;
+  freq: Freq;
+  anchor: string;        // YYYY-MM-DD of the first occurrence
+  lastGen: number;       // highest period index already materialized
+}
+
 export interface AppState {
   entries: Entry[];
   currency: Currency;
-  categories: string[];                  // top-level, ordered
+  categories: string[];                  // top-level, ordered by importance
   subcats: Record<string, string[]>;     // category → subcategories
-  catMode: CatMode;
+  catMode: CatMode;                      // legacy — app always behaves two-level
+  recurring: RecurringRule[];
   page: Page;
 }

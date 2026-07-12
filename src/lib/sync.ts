@@ -121,10 +121,16 @@ export async function fullSync(state: AppState): Promise<Partial<AppState> | nul
     }
 
     // Push the queued ops (snapshot — ops enqueued while we sync
-    // stay in the queue for the next run).
+    // stay in the queue for the next run). Collapse to one final op
+    // per id, last op wins: duplicates in one upsert batch are a
+    // Postgres error (React StrictMode can double-enqueue), and
+    // del-then-re-add (Reset data) must end with the row alive.
     const ops = loadPending();
-    const adds = ops.filter((o): o is Extract<PendingOp, { t: 'add' }> => o.t === 'add').map((o) => rowFromEntry(o.e));
-    const dels = ops.filter((o): o is Extract<PendingOp, { t: 'del' }> => o.t === 'del').map((o) => o.id);
+    const finalOp = new Map<number, PendingOp>();
+    ops.forEach((o) => finalOp.set(o.t === 'add' ? o.e.id : o.id, o));
+    const adds: ReturnType<typeof rowFromEntry>[] = [];
+    const dels: number[] = [];
+    finalOp.forEach((o) => { if (o.t === 'add') adds.push(rowFromEntry(o.e)); else dels.push(o.id); });
     if (adds.length) {
       const { error } = await supabase.from('entries').upsert(adds);
       if (error) throw error;
@@ -142,7 +148,7 @@ export async function fullSync(state: AppState): Promise<Partial<AppState> | nul
     const { data: remote, error: settingsErr } = await supabase.from('settings').select('data, updated_at').maybeSingle();
     if (settingsErr) throw settingsErr;
     let settingsPatch: Partial<AppState> = {};
-    const localData = { currency: state.currency, categories: state.categories, subcats: state.subcats, catMode: state.catMode };
+    const localData = { currency: state.currency, categories: state.categories, subcats: state.subcats, catMode: state.catMode, recurring: state.recurring };
     const localNewer = localAt && (!remote || new Date(localAt).getTime() > new Date(remote.updated_at).getTime());
     if (!remote || localNewer) {
       const { error } = await supabase.from('settings').upsert({

@@ -55,4 +55,3 @@ The current icon is the design system's lime wallet mark. To swap in a final log
 ## Going native (later)
 
 The app is a plain client-only Vite + React SPA, so wrapping it with [Capacitor](https://capacitorjs.com) is the intended path to App Store / Play Store builds — no code changes needed to keep testing it as a web app in the meantime.
-# simplog

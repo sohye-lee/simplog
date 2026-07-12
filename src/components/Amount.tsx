@@ -20,7 +20,7 @@ export interface AmountProps {
 
 export function Amount({
   value = 0,
-  currency = 'KRW',
+  currency = 'USD',
   size = 'md',
   signed = false,
   emphasis = 'normal',

@@ -23,15 +23,17 @@ interface Preset {
 }
 
 // Most-logged (note+category) combos — min 2 occurrences, newest
-// amount wins, expenses first since that's what you log on the go.
+// amount/sub win. Sub is NOT part of the key: "Coffee" logged with
+// and without a subcategory is still the same habit.
 function frequentPresets(entries: Entry[], limit = 6): Preset[] {
   const map = new Map<string, Preset & { lastDate: string }>();
   for (const e of entries) {
-    const key = `${e.kind}|${e.category}|${e.sub || ''}|${e.note}`;
+    const key = `${e.kind}|${e.category}|${e.note}`;
     const cur = map.get(key);
     if (cur) {
       cur.count++;
       if (e.date > cur.lastDate) { cur.amount = e.amount; cur.lastDate = e.date; }
+      if (!cur.sub && e.sub) cur.sub = e.sub;
     } else {
       map.set(key, { kind: e.kind, category: e.category, sub: e.sub, note: e.note, amount: e.amount, count: 1, lastDate: e.date });
     }

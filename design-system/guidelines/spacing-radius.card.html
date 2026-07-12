@@ -1,0 +1,24 @@
+<!-- @dsCard group="Spacing" viewport="700x150" name="Corner radii" subtitle="Small & crisp — this is a ledger, not a toy" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 20px; background: var(--surface-page); font-family: var(--font-mono); }
+  .row { display: flex; gap: 16px; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .box { width: 72px; height: 60px; background: var(--surface-card); border: 1px solid var(--border-strong); }
+  .lbl { font-size: 11px; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="item"><div class="box" style="border-radius:var(--radius-xs)"></div><span class="lbl">xs · 3</span></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-sm)"></div><span class="lbl">sm · 5</span></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-md)"></div><span class="lbl">md · 8</span></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-lg)"></div><span class="lbl">lg · 12</span></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-pill); width:100px"></div><span class="lbl">pill</span></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Semantic surfaces & text" subtitle="How ink & lime map to roles" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 20px; background: var(--surface-page); font-family: var(--font-mono); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .cell { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; height: 78px; display:flex; flex-direction:column; justify-content:space-between; }
+  .tag { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+  .val { font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="cell" style="background:var(--surface-page)"><span class="tag">surface-page</span><span class="val">paper</span></div>
+    <div class="cell" style="background:var(--surface-card)"><span class="tag">surface-card</span><span class="val">white</span></div>
+    <div class="cell" style="background:var(--surface-sunken)"><span class="tag">surface-sunken</span><span class="val">ink-50</span></div>
+    <div class="cell" style="background:var(--surface-inverse)"><span class="tag" style="color:var(--ink-400)">surface-inverse</span><span class="val" style="color:#fff">ink-900</span></div>
+    <div class="cell"><span class="tag">text-primary</span><span class="val" style="color:var(--text-primary)">The quick brown</span></div>
+    <div class="cell"><span class="tag">text-secondary</span><span class="val" style="color:var(--text-secondary)">The quick brown</span></div>
+    <div class="cell"><span class="tag">text-muted</span><span class="val" style="color:var(--text-muted)">The quick brown</span></div>
+    <div class="cell"><span class="tag">text-accent</span><span class="val" style="color:var(--text-accent)">₩1,240,000</span></div>
+  </div>
+</body>
+</html>

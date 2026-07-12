@@ -1,0 +1,25 @@
+<!-- @dsCard group="Type" viewport="700x160" name="Tabular figures" subtitle="Slashed-zero tabular nums — amounts align in columns" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 20px; background: var(--surface-page); font-family: var(--font-mono); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums slashed-zero; }
+  td { padding: 5px 0; font-size: 15px; }
+  td.n { text-align: right; letter-spacing: -0.01em; }
+  td.c { color: var(--text-secondary); font-size: 13px; }
+  tr { border-bottom: 1px solid var(--ink-100); }
+  tr:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+  <table>
+    <tr><td class="c">Groceries · Emart</td><td class="n">−₩ 48,300</td></tr>
+    <tr><td class="c">Rent</td><td class="n">−₩ 900,000</td></tr>
+    <tr><td class="c">Coffee · 10 cups</td><td class="n">−₩ 41,000</td></tr>
+    <tr><td class="c">Salary</td><td class="n">+₩ 3,200,000</td></tr>
+  </table>
+</body>
+</html>

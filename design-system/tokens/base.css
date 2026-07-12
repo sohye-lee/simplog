@@ -1,0 +1,48 @@
+/* ── Ledger · Base reset & element defaults ─────────────────────
+   Light global defaults so bare HTML already looks like Ledger.
+   Kept minimal — components carry their own styling. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background: var(--surface-page);
+  font-feature-settings: var(--num-features);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular numbers everywhere by default — this is a ledger */
+body { font-variant-numeric: tabular-nums slashed-zero; }
+
+h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: var(--weight-semibold); line-height: var(--leading-tight); }
+
+p { margin: 0; }
+
+a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--ink-300);
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--dur-fast) var(--ease-standard);
+}
+a:hover { text-decoration-color: var(--lime-600); }
+
+button { font-family: inherit; }
+
+::selection { background: var(--lime-300); color: var(--ink-900); }
+
+/* Overline / eyebrow label utility used across specimens */
+.ledger-overline {
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+}

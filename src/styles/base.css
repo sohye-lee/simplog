@@ -1,0 +1,89 @@
+/* ── SimpleLog · Base reset & element defaults ──────────────────
+   Light global defaults so bare HTML already looks on-brand.
+   Kept minimal — components carry their own styling. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background: var(--surface-page);
+  font-feature-settings: var(--num-features);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular numbers everywhere by default — this is a ledger */
+body { font-variant-numeric: tabular-nums slashed-zero; }
+
+h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: var(--weight-semibold); line-height: var(--leading-tight); }
+
+p { margin: 0; }
+
+a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--ink-300);
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--dur-fast) var(--ease-standard);
+}
+a:hover { text-decoration-color: var(--lime-600); }
+
+button { font-family: inherit; }
+
+::selection { background: var(--lime-300); color: var(--ink-900); }
+
+/* Overline / eyebrow label utility */
+.overline {
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+}
+
+/* ── App-level bits ─────────────────────────────────────────── */
+
+@keyframes slFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slRise { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes slRise { from { transform: none; opacity: 0; } to { transform: none; opacity: 1; } }
+  *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 120ms !important; }
+}
+
+/* Summary strip: 3 cards side by side, stacked on narrow phones */
+.sl-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 480px) {
+  .sl-summary { grid-template-columns: 1fr; }
+}
+
+/* Header nav: icons-only under 600px */
+@media (max-width: 600px) {
+  .sl-nav-label { display: none; }
+}
+
+/* Entry rows: delete button reveals on hover; always visible on touch */
+.sl-entry-delete { opacity: 0; transition: opacity 120ms; }
+.sl-entry-row:hover .sl-entry-delete,
+.sl-entry-row:focus-within .sl-entry-delete { opacity: 1; }
+@media (hover: none) {
+  .sl-entry-delete { opacity: 1; }
+}
+
+/* Floating Add button clears iOS home-indicator */
+.sl-fab {
+  position: fixed;
+  right: max(24px, calc((100vw - var(--container-max)) / 2 - 8px));
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+}

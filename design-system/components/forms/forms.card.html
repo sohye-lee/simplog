@@ -1,0 +1,67 @@
+<!-- @dsCard group="Components" viewport="700x420" name="Forms — buttons, inputs, select, segmented" subtitle="Button · IconButton · Input · Select · SegmentedControl" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  body { margin: 0; padding: 24px; background: var(--surface-page); }
+  .grp { margin-bottom: 22px; }
+  .grp > .cap { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+  .rowf { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .cols { display: flex; gap: 16px; }
+  .cols > * { flex: 1; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { Button, IconButton, Input, Select, SegmentedControl } = window.LedgerExpenseTrackerDesignSystem_b8666b;
+const Chevron = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+function Demo() {
+  const [kind, setKind] = React.useState('Expense');
+  return (
+    <div>
+      <div className="grp">
+        <div className="cap">Button — variants & sizes</div>
+        <div className="rowf">
+          <Button variant="primary">Add entry</Button>
+          <Button variant="secondary">Cancel</Button>
+          <Button variant="ghost">Export CSV</Button>
+          <Button variant="dark">Save month</Button>
+          <Button variant="primary" disabled>Disabled</Button>
+          <Button variant="secondary" size="sm">Small</Button>
+          <Button variant="primary" size="lg">Large</Button>
+        </div>
+      </div>
+      <div className="grp">
+        <div className="cap">IconButton</div>
+        <div className="rowf">
+          <IconButton label="prev" variant="outline"><Chevron/></IconButton>
+          <IconButton label="ghost"><Chevron/></IconButton>
+          <IconButton label="solid" variant="solid"><Chevron/></IconButton>
+        </div>
+      </div>
+      <div className="grp">
+        <div className="cap">Input & Select</div>
+        <div className="cols">
+          <Input label="Amount" prefix="₩" align="right" numeric placeholder="0" />
+          <Input label="Note" placeholder="e.g. Lunch — Kim's" />
+          <Select label="Category" placeholder="Choose…" options={['Food','Rent','Transport','Fun']} />
+        </div>
+      </div>
+      <div className="grp">
+        <div className="cap">SegmentedControl</div>
+        <SegmentedControl options={['Expense','Income']} value={kind} onChange={setKind} />
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>
+</body>
+</html>

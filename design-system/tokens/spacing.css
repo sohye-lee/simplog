@@ -1,0 +1,33 @@
+/* ── Ledger · Spacing & radius tokens ───────────────────────────
+   4px base grid. Ledger is dense and calm — generous outer padding,
+   tight inner rows. Corners are small and crisp (this is a ledger,
+   not a bubbly consumer toy). */
+
+:root {
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius — small & crisp */
+  --radius-xs: 3px;
+  --radius-sm: 5px;    /* inputs, chips                  */
+  --radius-md: 8px;    /* cards, buttons                 */
+  --radius-lg: 12px;   /* large panels                   */
+  --radius-pill: 999px;
+
+  /* Border widths */
+  --border-hair: 1px;
+  --border-thick: 1.5px;
+
+  /* Layout */
+  --container-max: 760px;   /* the app is single-column & narrow  */
+  --gutter: var(--space-6);
+}

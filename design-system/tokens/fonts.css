@@ -1,0 +1,8 @@
+/* ── Ledger webfonts ────────────────────────────────────────────
+   IBM Plex Mono is the workhorse typeface (UI + tabular figures).
+   IBM Plex Serif is used only for large editorial display moments.
+
+   NOTE: served from Google Fonts CDN, not self-hosted binaries.
+   See readme.md → "Font substitution" if you need offline/self-hosted
+   copies. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap');

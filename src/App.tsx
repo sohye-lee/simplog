@@ -208,7 +208,7 @@ export default function App() {
 
         {page === 'overview' && (
           <OverviewPage income={income} spent={spent} byCategory={byCategory} bySubcat={bySubcat}
-            categories={categories} monthEntries={monthEntries} month={month}
+            categories={categories} allEntries={entries} month={month}
             recent={sorted.slice(0, 4)} currency={currency}
             onSeeAll={() => patch({ page: 'entries' })} onDelete={del} />
         )}

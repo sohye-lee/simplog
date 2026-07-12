@@ -1,11 +1,15 @@
 // Charts — hand-rolled SVG, monotone ink + one lime accent.
-// Donut = where it went (category share); Bars = when (daily totals).
+// Range: Month / YTD / trailing 1Y. Share = category donut;
+// Trend = daily bars (month) or monthly bars (year ranges).
 import { useMemo, useState } from 'react';
 import { Card } from '../components/Card';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { Amount } from '../components/Amount';
 import { SectionHeader, EmptyState } from './pieces';
+import { monthOf, shiftMonth } from '../lib/months';
 import type { Currency, Entry, Kind } from '../lib/types';
+
+type Range = 'month' | 'ytd' | '1y';
 
 // Largest slice gets the lime; the rest descend through the ink ramp.
 const SLICE_COLORS = ['var(--lime-500)', 'var(--ink-900)', 'var(--ink-600)', 'var(--ink-400)', 'var(--ink-300)', 'var(--ink-200)'];
@@ -22,7 +26,7 @@ function arcPath(cx: number, cy: number, r: number, start: number, end: number):
   return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
 }
 
-// ── Donut: category share ────────────────────────────────────────
+// ── Donut: category share over the range ────────────────────────
 function Donut({ byCategory, total, currency }: { byCategory: Record<string, number>; total: number; currency: Currency }) {
   const sorted = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
   // Group everything past the 5th slice into "Other" so the ring stays readable.
@@ -38,7 +42,6 @@ function Donut({ byCategory, total, currency }: { byCategory: Record<string, num
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Category share">
         {slices.map(([cat, val], i) => {
           const sweep = (val / total) * 360;
-          // tiny gap between slices; full-circle single slice needs two arcs
           const start = angle + 1, end = angle + Math.max(sweep - 1, 0.5);
           angle += sweep;
           if (sweep >= 359.5) {
@@ -65,79 +68,110 @@ function Donut({ byCategory, total, currency }: { byCategory: Record<string, num
   );
 }
 
-// ── Bars: daily totals across the month ──────────────────────────
-function DailyBars({ entries, month, currency }: { entries: Entry[]; month: string; currency: Currency }) {
-  const [y, m] = month.split('-').map(Number);
-  const days = new Date(y, m, 0).getDate();
-  const totals = useMemo(() => {
-    const t = Array(days).fill(0) as number[];
-    entries.forEach((e) => { const d = Number(e.date.slice(8, 10)); if (d >= 1 && d <= days) t[d - 1] += e.amount; });
-    return t;
-  }, [entries, days]);
-  const max = Math.max(...totals, 1);
-  const maxDay = totals.indexOf(Math.max(...totals)) + 1;
+// ── Bars: generic bucketed totals (days of a month / months) ────
+interface Bucket { label: string; showLabel: boolean; value: number }
+
+function Bars({ buckets, peakLabel, currency }: { buckets: Bucket[]; peakLabel: (b: Bucket) => string; currency: Currency }) {
+  const max = Math.max(...buckets.map((b) => b.value), 1);
+  const peakIdx = buckets.reduce((best, b, i) => (b.value > buckets[best].value ? i : best), 0);
 
   const W = 560, H = 140, PAD = 4;
-  const bw = (W - PAD * 2) / days;
+  const bw = (W - PAD * 2) / buckets.length;
 
   return (
     <div>
-      <svg width="100%" viewBox={`0 0 ${W} ${H + 22}`} role="img" aria-label="Daily totals" style={{ display: 'block' }}>
-        {totals.map((v, i) => {
-          const h = v ? Math.max((v / max) * H, 3) : 0;
-          const isMax = i + 1 === maxDay && v > 0;
+      <svg width="100%" viewBox={`0 0 ${W} ${H + 22}`} role="img" aria-label="Totals over time" style={{ display: 'block' }}>
+        {buckets.map((b, i) => {
+          const h = b.value ? Math.max((b.value / max) * H, 3) : 0;
+          const isPeak = i === peakIdx && b.value > 0;
           return (
-            <g key={i}>
-              <rect x={PAD + i * bw + 1} y={H - Math.max(h, 2)} width={Math.max(bw - 2, 2)} height={Math.max(h, 2)}
-                rx={1.5} fill={v === 0 ? 'var(--ink-100)' : isMax ? 'var(--lime-500)' : 'var(--ink-900)'} />
-            </g>
+            <rect key={i} x={PAD + i * bw + 1.5} y={H - Math.max(h, 2)} width={Math.max(bw - 3, 2)} height={Math.max(h, 2)}
+              rx={1.5} fill={b.value === 0 ? 'var(--ink-100)' : isPeak ? 'var(--lime-500)' : 'var(--ink-900)'} />
           );
         })}
-        {[1, 10, 20, days].map((d) => (
-          <text key={d} x={PAD + (d - 0.5) * bw} y={H + 16} textAnchor="middle"
-            style={{ font: '400 9px var(--font-mono)', fill: 'var(--ink-400)' }}>{d}</text>
+        {buckets.map((b, i) => b.showLabel && (
+          <text key={'l' + i} x={PAD + (i + 0.5) * bw} y={H + 16} textAnchor="middle"
+            style={{ font: '400 9px var(--font-mono)', fill: 'var(--ink-400)' }}>{b.label}</text>
         ))}
       </svg>
-      {totals[maxDay - 1] > 0 && (
+      {buckets[peakIdx].value > 0 && (
         <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 6 }}>
-          Peak: day {maxDay} · <Amount value={totals[maxDay - 1]} size="xs" currency={currency} />
+          Peak: {peakLabel(buckets[peakIdx])} · <Amount value={buckets[peakIdx].value} size="xs" currency={currency} />
         </div>
       )}
     </div>
   );
 }
 
-// ── The card with tabs + chart-type toggle ───────────────────────
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// ── The card: range + kind tabs + chart type ────────────────────
 interface ChartsCardProps {
-  entries: Entry[];          // active month, both kinds
-  month: string;
+  allEntries: Entry[];       // full history — ranges are computed here
+  month: string;             // active month 'YYYY-MM'
   currency: Currency;
 }
 
-export function ChartsCard({ entries, month, currency }: ChartsCardProps) {
+export function ChartsCard({ allEntries, month, currency }: ChartsCardProps) {
   const [tab, setTab] = useState<Kind>('expense');
-  const [type, setType] = useState<'donut' | 'daily'>('donut');
+  const [type, setType] = useState<'share' | 'trend'>('share');
+  const [range, setRange] = useState<Range>('month');
 
-  const subset = entries.filter((e) => e.kind === tab);
+  // Months covered by the current range, oldest first.
+  const rangeMonths = useMemo(() => {
+    if (range === 'month') return [month];
+    const first = range === 'ytd' ? `${month.slice(0, 4)}-01` : shiftMonth(month, -11);
+    const out: string[] = [];
+    for (let m = first; m <= month; m = shiftMonth(m, 1)) out.push(m);
+    return out;
+  }, [range, month]);
+
+  const subset = useMemo(
+    () => allEntries.filter((e) => e.kind === tab && rangeMonths.includes(monthOf(e.date))),
+    [allEntries, tab, rangeMonths],
+  );
   const total = subset.reduce((s, e) => s + e.amount, 0);
   const byCategory = subset.reduce<Record<string, number>>((acc, e) => {
     acc[e.category] = (acc[e.category] || 0) + e.amount;
     return acc;
   }, {});
 
+  const buckets = useMemo<Bucket[]>(() => {
+    if (range === 'month') {
+      const [y, m] = month.split('-').map(Number);
+      const days = new Date(y, m, 0).getDate();
+      const t = Array(days).fill(0) as number[];
+      subset.forEach((e) => { const d = Number(e.date.slice(8, 10)); if (d >= 1 && d <= days) t[d - 1] += e.amount; });
+      return t.map((value, i) => ({ label: String(i + 1), showLabel: [1, 10, 20, days].includes(i + 1), value }));
+    }
+    return rangeMonths.map((m, i) => {
+      const value = subset.filter((e) => monthOf(e.date) === m).reduce((s, e) => s + e.amount, 0);
+      const idx = Number(m.slice(5)) - 1;
+      const showLabel = rangeMonths.length <= 7 || i % 2 === 0 || i === rangeMonths.length - 1;
+      return { label: MONTH_SHORT[idx], showLabel, value };
+    });
+  }, [range, month, subset, rangeMonths]);
+
   return (
     <Card padding="md">
       <SectionHeader title="Charts" right={
-        <SegmentedControl size="sm" options={[{ value: 'donut', label: 'Share' }, { value: 'daily', label: 'Daily' }]} value={type} onChange={(v) => setType(v as 'donut' | 'daily')} />
+        <SegmentedControl size="sm" options={[{ value: 'month', label: 'Month' }, { value: 'ytd', label: 'YTD' }, { value: '1y', label: '1Y' }]} value={range} onChange={(v) => setRange(v as Range)} />
       } />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <SegmentedControl fullWidth options={[{ value: 'expense', label: 'Spent' }, { value: 'income', label: 'Income' }]} value={tab} onChange={(v) => setTab(v as Kind)} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+            {range === 'month' ? 'This month' : range === 'ytd' ? `Jan – now, ${month.slice(0, 4)}` : 'Last 12 months'}
+          </span>
+          <SegmentedControl size="sm" options={[{ value: 'share', label: 'Share' }, { value: 'trend', label: 'Trend' }]} value={type} onChange={(v) => setType(v as 'share' | 'trend')} />
+        </div>
         {total === 0 ? (
-          <EmptyState line={tab === 'expense' ? 'No spending this month.' : 'No income this month.'} />
-        ) : type === 'donut' ? (
+          <EmptyState line={tab === 'expense' ? 'No spending in this range.' : 'No income in this range.'} />
+        ) : type === 'share' ? (
           <Donut byCategory={byCategory} total={total} currency={currency} />
         ) : (
-          <DailyBars entries={subset} month={month} currency={currency} />
+          <Bars buckets={buckets} currency={currency}
+            peakLabel={(b) => (range === 'month' ? `day ${b.label}` : b.label)} />
         )}
       </div>
     </Card>

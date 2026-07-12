@@ -12,7 +12,7 @@ interface OverviewPageProps {
   byCategory: Record<string, number>;
   bySubcat: Record<string, Record<string, number>>;
   categories: string[];         // importance order (Settings)
-  monthEntries: Entry[];        // active month, both kinds — feeds charts
+  allEntries: Entry[];          // full history — charts compute their own ranges
   month: string;
   recent: Entry[];
   currency: Currency;
@@ -20,7 +20,7 @@ interface OverviewPageProps {
   onDelete: (id: number) => void;
 }
 
-export function OverviewPage({ income, spent, byCategory, bySubcat, categories, monthEntries, month, recent, currency, onSeeAll, onDelete }: OverviewPageProps) {
+export function OverviewPage({ income, spent, byCategory, bySubcat, categories, allEntries, month, recent, currency, onSeeAll, onDelete }: OverviewPageProps) {
   const [showCharts, setShowCharts] = useState(false);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -33,7 +33,7 @@ export function OverviewPage({ income, spent, byCategory, bySubcat, categories, 
           Charts
         </Button>
       </div>
-      {showCharts && <ChartsCard entries={monthEntries} month={month} currency={currency} />}
+      {showCharts && <ChartsCard allEntries={allEntries} month={month} currency={currency} />}
 
       <Card padding="md">
         <SectionHeader title="Where it went" right={<span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{Object.keys(byCategory).length} categories · your order</span>} />

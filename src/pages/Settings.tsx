@@ -220,7 +220,7 @@ export function SettingsPage({ currency, categories, subcats, recurring, onCurre
               onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = ''; }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Reset everything to the sample dataset.</div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Erase all entries and restore default categories.</div>
             <Button variant="secondary" onClick={onReset}>Reset data</Button>
           </div>
         </div>

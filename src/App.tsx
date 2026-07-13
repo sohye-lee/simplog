@@ -233,7 +233,7 @@ export default function App() {
             onRemoveRecurring={(id) => mutateSettings((s) => ({ ...s, recurring: s.recurring.filter((r) => r.id !== id) }))}
             onReset={() => {
               // Reset the account, not just this device: tombstone every
-              // current entry on the server, then upload the fresh sample.
+              // current entry on the server before starting fresh.
               stRef.current.entries.forEach((e) => enqueueDelete(e.id));
               const fresh = defaultState();
               fresh.entries.forEach((e) => enqueueAdd(e));

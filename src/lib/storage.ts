@@ -1,5 +1,6 @@
 import type { AppState } from './types';
 import { DEFAULT_CATEGORIES, SUBCATEGORIES, SEED } from './data';
+import { supabase } from './supabase';
 
 // One localStorage key holding the whole AppState as JSON.
 // Bump the version suffix whenever the shape changes so stale
@@ -8,7 +9,10 @@ const LS_KEY = 'simplelog.state.v1';
 
 export function defaultState(): AppState {
   return {
-    entries: SEED,
+    // With sync (login gate) the server is the source of truth — fresh
+    // devices start empty and pull. The sample dataset only exists to
+    // demo local-only mode.
+    entries: supabase ? [] : SEED,
     currency: 'USD',
     categories: DEFAULT_CATEGORIES,
     subcats: SUBCATEGORIES,

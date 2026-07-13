@@ -11,7 +11,6 @@ import type { AppState, Entry } from './types';
 type PendingOp = { t: 'add'; e: Entry } | { t: 'del'; id: number };
 
 const PENDING_KEY = 'simplelog.pending.v1';
-const BOOTSTRAPPED_KEY = 'simplelog.bootstrapped.v1';
 const SETTINGS_AT_KEY = 'simplelog.settingsAt.v1';
 const LAST_SYNC_KEY = 'simplelog.lastSync.v1';
 
@@ -82,7 +81,6 @@ export async function verifyCode(email: string, token: string): Promise<string |
 export async function signOut(): Promise<void> {
   if (!supabase) return;
   await supabase.auth.signOut();
-  localStorage.removeItem(BOOTSTRAPPED_KEY);
   savePending([]);
 }
 
@@ -109,17 +107,6 @@ export async function fullSync(state: AppState): Promise<Partial<AppState> | nul
   if (running) return null;   // caller re-schedules; queue survives either way
   running = true;
   try {
-    // First sync on this device: upload everything local once so
-    // entries logged before signing in survive.
-    if (!localStorage.getItem(BOOTSTRAPPED_KEY)) {
-      const rows = state.entries.map(rowFromEntry);
-      if (rows.length) {
-        const { error } = await supabase.from('entries').upsert(rows);
-        if (error) throw error;
-      }
-      localStorage.setItem(BOOTSTRAPPED_KEY, '1');
-    }
-
     // Push the queued ops (snapshot — ops enqueued while we sync
     // stay in the queue for the next run). Collapse to one final op
     // per id, last op wins: duplicates in one upsert batch are a

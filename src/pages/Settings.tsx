@@ -133,9 +133,10 @@ interface SettingsPageProps {
   onImport: (file: File) => void;
   onSyncNow: () => Promise<void>;
   onSignOut: () => void;
+  onDeleteAccount: () => Promise<string | null>;
 }
 
-export function SettingsPage({ currency, categories, subcats, recurring, onCurrency, onAddCategory, onRenameCategory, onRemoveCategory, onReorderCategories, onAddSub, onRenameSub, onMoveSub, onRemoveSub, onRemoveRecurring, onReset, onBackup, onImport, onSyncNow, onSignOut }: SettingsPageProps) {
+export function SettingsPage({ currency, categories, subcats, recurring, onCurrency, onAddCategory, onRenameCategory, onRemoveCategory, onReorderCategories, onAddSub, onRenameSub, onMoveSub, onRemoveSub, onRemoveRecurring, onReset, onBackup, onImport, onSyncNow, onSignOut, onDeleteAccount }: SettingsPageProps) {
   const [newCat, setNewCat] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const add = () => { const v = newCat.trim(); if (v && !categories.includes(v)) { onAddCategory(v); setNewCat(''); } };
@@ -173,7 +174,7 @@ export function SettingsPage({ currency, categories, subcats, recurring, onCurre
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <SyncCard onSyncNow={onSyncNow} onSignOut={onSignOut} />
+      <SyncCard onSyncNow={onSyncNow} onSignOut={onSignOut} onDeleteAccount={onDeleteAccount} />
 
       <Card padding="md">
         <SectionHeader title="Currency" />

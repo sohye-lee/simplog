@@ -90,6 +90,27 @@ export async function sessionEmail(): Promise<string | null> {
   return data.session?.user.email ?? null;
 }
 
+/**
+ * Delete the signed-in user's account data, then sign out.
+ * Removes every entry and the settings row (row-level security scopes
+ * this to the current user). The auth record itself is purged by the
+ * server (a scheduled cleanup / edge function); the user can re-register
+ * the same email later with a clean slate. Returns an error string or null.
+ */
+export async function deleteAccount(): Promise<string | null> {
+  if (!supabase) return 'Sync is not configured.';
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return 'You are not signed in.';
+  const uid = session.user.id;
+  const e1 = await supabase.from('entries').delete().eq('user_id', uid);
+  if (e1.error) return e1.error.message;
+  const e2 = await supabase.from('settings').delete().eq('user_id', uid);
+  if (e2.error) return e2.error.message;
+  await supabase.auth.signOut();
+  savePending([]);
+  return null;
+}
+
 // ── Full sync ────────────────────────────────────────────────────
 
 let running = false;

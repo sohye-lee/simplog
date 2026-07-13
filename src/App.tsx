@@ -16,7 +16,7 @@ import { loadState, saveState, defaultState } from './lib/storage';
 import { monthOf, monthLabel, shiftMonth, thisMonth, todayISO } from './lib/months';
 import { exportMonth, exportBackup, parseBackup } from './lib/export';
 import type { ExportFormat } from './lib/export';
-import { enqueueAdd, enqueueDelete, markSettingsChanged, fullSync, signOut } from './lib/sync';
+import { enqueueAdd, enqueueDelete, markSettingsChanged, fullSync, signOut, deleteAccount } from './lib/sync';
 import { materialize, entryIdFor } from './lib/recurring';
 import { supabase } from './lib/supabase';
 
@@ -138,6 +138,15 @@ export default function App() {
     setSt({ ...defaultState(), entries: [], recurring: [] });
     setMonth(thisMonth());
     await signOut();
+  };
+
+  // Delete account: erase server data + sign out, then clear the device.
+  const doDeleteAccount = async (): Promise<string | null> => {
+    const err = await deleteAccount();
+    if (err) return err;
+    setSt({ ...defaultState(), entries: [], recurring: [] });
+    setMonth(thisMonth());
+    return null;
   };
 
   // ── Recurring: materialize due entries whenever rules change ────
@@ -336,6 +345,7 @@ export default function App() {
             onImport={onImport}
             onSyncNow={runSync}
             onSignOut={doSignOut}
+            onDeleteAccount={doDeleteAccount}
           />
         )}
       </main>

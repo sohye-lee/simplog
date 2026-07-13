@@ -12,9 +12,10 @@ import { sessionEmail, lastSyncedAt } from '../lib/sync';
 interface SyncCardProps {
   onSyncNow: () => Promise<void>;
   onSignOut: () => void;
+  onDeleteAccount: () => Promise<string | null>;
 }
 
-export function SyncCard({ onSyncNow, onSignOut }: SyncCardProps) {
+export function SyncCard({ onSyncNow, onSignOut, onDeleteAccount }: SyncCardProps) {
   const [signedInAs, setSignedInAs] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
@@ -47,6 +48,14 @@ export function SyncCard({ onSyncNow, onSignOut }: SyncCardProps) {
     setBusy(false);
   };
 
+  const deleteAccount = async () => {
+    if (!window.confirm('Delete your account? This permanently erases all your entries and settings and signs you out. This cannot be undone.')) return;
+    setBusy(true); setStatus('Deleting account…');
+    const err = await onDeleteAccount();
+    if (err) { setStatus(`Couldn't delete account: ${err}`); setBusy(false); }
+    // on success the auth gate takes over and this card unmounts
+  };
+
   return (
     <Card padding="md">
       <SectionHeader title="Account" right={<span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{signedInAs ?? ''}</span>} />
@@ -59,6 +68,13 @@ export function SyncCard({ onSyncNow, onSignOut }: SyncCardProps) {
           <Button variant="ghost" disabled={busy} onClick={onSignOut}>Sign out</Button>
         </div>
         {status && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{status}</div>}
+        <div style={{ borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Permanently delete your account and all data.</span>
+          <button type="button" disabled={busy} onClick={deleteAccount}
+            style={{ flexShrink: 0, border: 'none', background: 'transparent', cursor: busy ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#A32D2D', padding: '4px 2px', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+            Delete account
+          </button>
+        </div>
       </div>
     </Card>
   );

@@ -1,4 +1,4 @@
-// SimpleLog iconography — Lucide (MIT) path data, rendered inline so
+// Simplog iconography — Lucide (MIT) path data, rendered inline so
 // the app has no runtime icon dependency. Stroke 2, 24×24, currentColor.
 import type { CSSProperties, SVGProps } from 'react';
 

@@ -1,7 +1,7 @@
 import type { CSSProperties, HTMLAttributes } from 'react';
 
 /**
- * Card — the base surface for SimpleLog panels. A 1px border, small
+ * Card — the base surface for Simplog panels. A 1px border, small
  * radius, no shadow by default (borders over elevation).
  */
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {

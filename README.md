@@ -1,4 +1,4 @@
-# SimpleLog
+# Simplog
 
 A deliberately minimal personal expense tracker. It answers three questions per month and nothing else: how much came in, how much went out, and where it went.
 

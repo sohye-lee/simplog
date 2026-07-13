@@ -1,4 +1,4 @@
-package com.sohyelee.simplelog;
+package com.sohyelee.simplog;
 
 import com.getcapacitor.BridgeActivity;
 

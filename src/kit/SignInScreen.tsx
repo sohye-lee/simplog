@@ -15,7 +15,7 @@ export function SignInScreen() {
             <rect x="40" y="31" width="13" height="10" rx="3.2" fill="#CCF017" />
             <circle cx="46.5" cy="36" r="2" fill="#0C0D0A" />
           </svg>
-          <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, letterSpacing: '-0.01em' }}>SimpleLog</div>
+          <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, letterSpacing: '-0.01em' }}>Simplog</div>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: 17, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             Know exactly where your <em>money</em> went this month.
           </div>

@@ -1,4 +1,4 @@
--- SimpleLog — Supabase schema.
+-- Simplog — Supabase schema.
 -- Run this once in the SQL editor of a fresh Supabase project
 -- (Dashboard → SQL Editor → paste → Run).
 

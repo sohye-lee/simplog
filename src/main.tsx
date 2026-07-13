@@ -20,6 +20,9 @@ import '@fontsource/ibm-plex-serif/400-italic.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import App from './App';
+import { initAnalytics } from './lib/analytics';
+
+initAnalytics();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

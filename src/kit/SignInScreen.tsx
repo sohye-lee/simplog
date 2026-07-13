@@ -25,6 +25,7 @@ export function SignInScreen() {
         </Card>
         <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.6 }}>
           No password — we email you a one-time code.<br />Your data syncs across phone, tablet, and web.
+          <br /><a href="/privacy" style={{ color: 'var(--text-muted)', textDecorationColor: 'var(--ink-300)' }}>Privacy policy</a>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-// Simplylog — app shell, auth gate, nav routing, month navigation,
+// SimplyLog — app shell, auth gate, nav routing, month navigation,
 // state + persistence + sync.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from './components/Button';
@@ -170,7 +170,7 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = () => {
       const restored = parseBackup(String(reader.result));
-      if (!restored) { window.alert('Not a valid Simplylog backup file.'); return; }
+      if (!restored) { window.alert('Not a valid SimplyLog backup file.'); return; }
       setSt({ ...restored, page: 'settings' });
       setMonth(thisMonth());
       restored.entries.forEach(enqueueAdd);   // pushed to the server on next sync
@@ -194,7 +194,7 @@ export default function App() {
         <div style={{ maxWidth: 'var(--container-max)', margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <Logo />
-            <span style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.01em' }}>Simplylog</span>
+            <span style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.01em' }}>SimplyLog</span>
           </div>
           <NavTabs page={page} onNav={(p) => patch({ page: p })} />
         </div>

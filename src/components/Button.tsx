@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
 
 /**
- * Simplylog primary action button. Lime is loud — use ONE `primary`
+ * SimplyLog primary action button. Lime is loud — use ONE `primary`
  * per view. `secondary` and `ghost` carry everything else.
  */
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

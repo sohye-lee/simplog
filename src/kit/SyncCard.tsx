@@ -7,13 +7,14 @@ import { Button } from '../components/Button';
 import { Icon } from '../components/Icon';
 import { SectionHeader } from './pieces';
 import { supabase } from '../lib/supabase';
-import { signOut, sessionEmail, lastSyncedAt } from '../lib/sync';
+import { sessionEmail, lastSyncedAt } from '../lib/sync';
 
 interface SyncCardProps {
   onSyncNow: () => Promise<void>;
+  onSignOut: () => void;
 }
 
-export function SyncCard({ onSyncNow }: SyncCardProps) {
+export function SyncCard({ onSyncNow, onSignOut }: SyncCardProps) {
   const [signedInAs, setSignedInAs] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
@@ -55,7 +56,7 @@ export function SyncCard({ onSyncNow }: SyncCardProps) {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Button variant="secondary" disabled={busy} onClick={syncNow} leadingIcon={<Icon name="arrow-up-right" size={15} />}>Sync now</Button>
-          <Button variant="ghost" disabled={busy} onClick={() => signOut()}>Sign out</Button>
+          <Button variant="ghost" disabled={busy} onClick={onSignOut}>Sign out</Button>
         </div>
         {status && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{status}</div>}
       </div>

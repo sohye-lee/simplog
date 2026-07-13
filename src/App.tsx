@@ -16,7 +16,7 @@ import { loadState, saveState, defaultState } from './lib/storage';
 import { monthOf, monthLabel, shiftMonth, thisMonth, todayISO } from './lib/months';
 import { exportMonth, exportBackup, parseBackup } from './lib/export';
 import type { ExportFormat } from './lib/export';
-import { enqueueAdd, enqueueDelete, markSettingsChanged, fullSync } from './lib/sync';
+import { enqueueAdd, enqueueDelete, markSettingsChanged, fullSync, signOut } from './lib/sync';
 import { materialize, entryIdFor } from './lib/recurring';
 import { supabase } from './lib/supabase';
 
@@ -97,20 +97,48 @@ export default function App() {
   }, [runSync]);
 
   // ── Auth gate ───────────────────────────────────────────────────
+  // The gate only reflects whether a session exists — it never wipes
+  // local data. That way a transient token hiccup can't destroy work
+  // in progress; only the explicit Sign out button clears the device.
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => setAuth(data.session ? 'in' : 'out'));
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       setAuth(session ? 'in' : 'out');
-      if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) runSync().catch(() => {});
-      if (event === 'SIGNED_OUT') {
-        // Leave no local trace: the next sign-in pulls from the server.
-        setSt({ ...defaultState(), entries: [], recurring: [] });
-        setMonth(thisMonth());
+      if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED')) {
+        runSync().catch(() => {});
       }
     });
     return () => sub.subscription.unsubscribe();
   }, [runSync]);
+
+  // Coming back to the tab (or waking from sleep) proactively refreshes
+  // the session so an expired access token gets renewed instead of
+  // bouncing the user to the sign-in screen mid-task.
+  useEffect(() => {
+    const sb = supabase;
+    if (!sb) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      sb.auth.getSession().then(({ data }) => {
+        setAuth(data.session ? 'in' : 'out');
+        if (data.session) runSync().catch(() => {});
+      });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [runSync]);
+
+  // Explicit sign out: clear the device, then end the session.
+  const doSignOut = async () => {
+    setSt({ ...defaultState(), entries: [], recurring: [] });
+    setMonth(thisMonth());
+    await signOut();
+  };
 
   // ── Recurring: materialize due entries whenever rules change ────
   useEffect(() => {
@@ -307,6 +335,7 @@ export default function App() {
             onBackup={() => exportBackup(stRef.current)}
             onImport={onImport}
             onSyncNow={runSync}
+            onSignOut={doSignOut}
           />
         )}
       </main>

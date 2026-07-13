@@ -132,9 +132,10 @@ interface SettingsPageProps {
   onBackup: () => Promise<void>;
   onImport: (file: File) => void;
   onSyncNow: () => Promise<void>;
+  onSignOut: () => void;
 }
 
-export function SettingsPage({ currency, categories, subcats, recurring, onCurrency, onAddCategory, onRenameCategory, onRemoveCategory, onReorderCategories, onAddSub, onRenameSub, onMoveSub, onRemoveSub, onRemoveRecurring, onReset, onBackup, onImport, onSyncNow }: SettingsPageProps) {
+export function SettingsPage({ currency, categories, subcats, recurring, onCurrency, onAddCategory, onRenameCategory, onRemoveCategory, onReorderCategories, onAddSub, onRenameSub, onMoveSub, onRemoveSub, onRemoveRecurring, onReset, onBackup, onImport, onSyncNow, onSignOut }: SettingsPageProps) {
   const [newCat, setNewCat] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const add = () => { const v = newCat.trim(); if (v && !categories.includes(v)) { onAddCategory(v); setNewCat(''); } };
@@ -172,7 +173,7 @@ export function SettingsPage({ currency, categories, subcats, recurring, onCurre
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <SyncCard onSyncNow={onSyncNow} />
+      <SyncCard onSyncNow={onSyncNow} onSignOut={onSignOut} />
 
       <Card padding="md">
         <SectionHeader title="Currency" />

@@ -80,10 +80,16 @@ button { font-family: inherit; }
   .sl-entry-delete { opacity: 1; }
 }
 
-/* Floating Add button clears iOS home-indicator */
+/* Floating Add button.
+   right: % (not vw) excludes the scrollbar, +24px lines it up with the
+   container's inner edge on wide screens.
+   bottom: the lvh−dvh term equals the mobile browser toolbar height
+   while it's visible, lifting the button above it; falls back to the
+   plain offset on older browsers. */
 .sl-fab {
   position: fixed;
-  right: max(24px, calc((100vw - var(--container-max)) / 2 - 8px));
-  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  right: max(24px, calc((100% - var(--container-max)) / 2 + 24px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(100lvh - 100dvh + 24px + env(safe-area-inset-bottom, 0px));
   z-index: 20;
 }

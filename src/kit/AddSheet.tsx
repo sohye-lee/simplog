@@ -14,6 +14,49 @@ import { INCOME_CATS } from '../lib/data';
 import { todayISO } from '../lib/months';
 import { evalExpr, isExpression } from '../lib/calc';
 
+// ── Mini calculator pad ──────────────────────────────────────────
+const CALC_KEYS = ['7', '8', '9', '÷', '4', '5', '6', '×', '1', '2', '3', '−', '0', '.', '⌫', '+'] as const;
+
+function CalcPad({ expr, setExpr, currency, onUse }: {
+  expr: string;
+  setExpr: (fn: (e: string) => string) => void;
+  currency: Currency;
+  onUse: (value: number) => void;
+}) {
+  const val = evalExpr(expr);
+  const press = (k: string) => setExpr((e) => (k === '⌫' ? e.slice(0, -1) : e + k));
+  return (
+    <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 10, background: 'var(--surface-sunken)' }}>
+      <div style={{ height: 32, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '0 6px', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums slashed-zero' }}>
+        <span style={{ color: 'var(--text-primary)', fontSize: 'var(--text-md)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{expr || '0'}</span>
+        {expr && val !== null && isExpression(expr) && (
+          <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)', flexShrink: 0 }}>= {val.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+        )}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+        {CALC_KEYS.map((k) => (
+          <button key={k} type="button" onClick={() => press(k)}
+            style={{ height: 42, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: '÷×−+⌫'.includes(k) ? 'var(--surface-inset)' : 'var(--surface-card)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-lg)', color: 'var(--text-primary)', cursor: 'pointer', lineHeight: 1 }}>
+            {k}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+        <button type="button" onClick={() => setExpr(() => '')}
+          style={{ width: 72, height: 42, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-card)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-md)', color: 'var(--text-secondary)', cursor: 'pointer', lineHeight: 1 }}>
+          C
+        </button>
+        <Button variant="primary" fullWidth disabled={val === null || val <= 0}
+          onClick={() => val !== null && onUse(Math.round(val * 100) / 100)}>
+          {val !== null && val > 0
+            ? `Use ${CURRENCY_SYMBOL[currency]}${(Math.round(val * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+            : 'Use'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 interface Preset {
   kind: Entry['kind'];
   category: string;
@@ -63,9 +106,11 @@ export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, 
   const [note, setNote] = useState('');
   const [date, setDate] = useState(todayISO());
   const [repeat, setRepeat] = useState('');
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [calcExpr, setCalcExpr] = useState('');
 
   useEffect(() => {
-    if (open) { setKind('Expense'); setAmount(''); setCategory(''); setSub(''); setNote(''); setDate(todayISO()); setRepeat(''); }
+    if (open) { setKind('Expense'); setAmount(''); setCategory(''); setSub(''); setNote(''); setDate(todayISO()); setRepeat(''); setCalcOpen(false); setCalcExpr(''); }
   }, [open]);
 
   const presets = useMemo(() => frequentPresets(entries), [entries]);
@@ -126,23 +171,25 @@ export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, 
           )}
           <SegmentedControl options={['Expense', 'Income']} value={kind} onChange={(v) => { setKind(v); setCategory(''); setSub(''); }} fullWidth />
           <div>
-            <Input label="Amount" prefix={CURRENCY_SYMBOL[currency]} align="right" numeric placeholder="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value.replace(/[^0-9.+\-*/×÷()]/g, ''))}
-              suffix={isExpression(amount) && computed !== null
-                ? `= ${computed.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
-                : undefined}
-              autoFocus />
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              {(['+', '−', '×', '÷'] as const).map((op) => (
-                <button key={op} type="button"
-                  onPointerDown={(e) => e.preventDefault()}   /* keep the keyboard open */
-                  onClick={() => setAmount((a) => a + (op === '−' ? '-' : op))}
-                  style={{ width: 40, height: 30, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-inset)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-md)', color: 'var(--text-secondary)', lineHeight: 1 }}>
-                  {op}
-                </button>
-              ))}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Input label="Amount" prefix={CURRENCY_SYMBOL[currency]} align="right" numeric placeholder="0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value.replace(/[^0-9.+\-*/×÷()]/g, ''))}
+                  suffix={isExpression(amount) && computed !== null
+                    ? `= ${computed.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+                    : undefined}
+                  autoFocus />
+              </div>
+              <IconButton label="Calculator" size="lg" variant={calcOpen ? 'solid' : 'outline'}
+                onClick={() => { if (!calcOpen) setCalcExpr(amount); setCalcOpen((o) => !o); }}>
+                <Icon name="calculator" size={18} />
+              </IconButton>
             </div>
+            {calcOpen && (
+              <CalcPad expr={calcExpr} setExpr={(fn) => setCalcExpr(fn)} currency={currency}
+                onUse={(v) => { setAmount(String(v)); setCalcOpen(false); }} />
+            )}
           </div>
           <Select label="Category" placeholder="Choose…" options={cats} value={category} onChange={(e) => { setCategory(e.target.value); setSub(''); }} />
           {subs.length > 0 && (

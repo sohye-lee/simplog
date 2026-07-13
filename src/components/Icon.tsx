@@ -22,6 +22,7 @@ const PATHS: Record<string, string[]> = {
   wallet: ['M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2', 'M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4'],
   'file-down': ['M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z', 'M14 2v5h5', 'M12 12v6', 'm9 15 3 3 3-3'],
   grip: ['M5 9h14', 'M5 15h14'],
+  calculator: ['M8 6h8', 'M16 14v4', 'M16 10h.01', 'M12 10h.01', 'M8 10h.01', 'M12 14h.01', 'M8 14h.01', 'M12 18h.01', 'M8 18h.01'],
   repeat: ['m17 2 4 4-4 4', 'M3 11v-1a4 4 0 0 1 4-4h14', 'm7 22-4-4 4-4', 'M21 13v1a4 4 0 0 1-4 4H3'],
 };
 const CIRCLES: Record<string, Array<{ cx: number; cy: number; r: number }>> = {
@@ -29,6 +30,7 @@ const CIRCLES: Record<string, Array<{ cx: number; cy: number; r: number }>> = {
 };
 const RECTS: Record<string, Array<{ x: number; y: number; width: number; height: number; rx: number }>> = {
   calendar: [{ x: 3, y: 4, width: 18, height: 18, rx: 2 }],
+  calculator: [{ x: 4, y: 2, width: 16, height: 20, rx: 2 }],
 };
 
 export type IconName = keyof typeof PATHS | string;

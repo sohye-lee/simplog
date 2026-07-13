@@ -12,6 +12,7 @@ import { CURRENCY_SYMBOL } from '../components/Amount';
 import type { Currency, Entry, Freq } from '../lib/types';
 import { INCOME_CATS } from '../lib/data';
 import { todayISO } from '../lib/months';
+import { evalExpr, isExpression } from '../lib/calc';
 
 interface Preset {
   kind: Entry['kind'];
@@ -73,7 +74,8 @@ export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, 
 
   const cats = kind === 'Income' ? INCOME_CATS : categories;
   const subs = kind === 'Expense' && subcats[category] ? subcats[category] : [];
-  const canSave = Number(amount) > 0 && !!category && !!date;
+  const computed = evalExpr(amount);
+  const canSave = computed !== null && computed > 0 && !!category && !!date;
 
   const applyPreset = (p: Preset) => {
     setKind(p.kind === 'income' ? 'Income' : 'Expense');
@@ -88,7 +90,7 @@ export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, 
     const e: Entry = {
       id: Date.now(),
       kind: kind.toLowerCase() as Entry['kind'],
-      amount: Number(amount),
+      amount: Math.round((computed as number) * 100) / 100,
       category,
       note: note || sub || category,
       date,
@@ -123,7 +125,25 @@ export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, 
             </div>
           )}
           <SegmentedControl options={['Expense', 'Income']} value={kind} onChange={(v) => { setKind(v); setCategory(''); setSub(''); }} fullWidth />
-          <Input label="Amount" prefix={CURRENCY_SYMBOL[currency]} align="right" numeric placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))} autoFocus />
+          <div>
+            <Input label="Amount" prefix={CURRENCY_SYMBOL[currency]} align="right" numeric placeholder="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/[^0-9.+\-*/×÷()]/g, ''))}
+              suffix={isExpression(amount) && computed !== null
+                ? `= ${computed.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+                : undefined}
+              autoFocus />
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              {(['+', '−', '×', '÷'] as const).map((op) => (
+                <button key={op} type="button"
+                  onPointerDown={(e) => e.preventDefault()}   /* keep the keyboard open */
+                  onClick={() => setAmount((a) => a + (op === '−' ? '-' : op))}
+                  style={{ width: 40, height: 30, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-inset)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-md)', color: 'var(--text-secondary)', lineHeight: 1 }}>
+                  {op}
+                </button>
+              ))}
+            </div>
+          </div>
           <Select label="Category" placeholder="Choose…" options={cats} value={category} onChange={(e) => { setCategory(e.target.value); setSub(''); }} />
           {subs.length > 0 && (
             <Select label="Subcategory (optional)" placeholder="—" options={subs} value={sub} onChange={(e) => setSub(e.target.value)} />

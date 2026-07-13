@@ -102,11 +102,15 @@ export function CategoryBreakdown({ byCategory, bySubcat, total, currency, twoLe
   );
 }
 
-// ── A single ledger row ──────────────────────────────────────────
-export function EntryRow({ entry, onDelete, currency }: { entry: Entry; onDelete: (id: number) => void; currency: Currency }) {
+// ── A single ledger row — tap to edit, trash to delete ──────────
+export function EntryRow({ entry, onDelete, onEdit, currency }: { entry: Entry; onDelete: (id: number) => void; onEdit?: (entry: Entry) => void; currency: Currency }) {
   const income = entry.kind === 'income';
   return (
-    <div className="sl-entry-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 4px', borderBottom: '1px solid var(--ink-100)' }}>
+    <div
+      className="sl-entry-row"
+      onClick={() => onEdit?.(entry)}
+      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 4px', borderBottom: '1px solid var(--ink-100)', cursor: onEdit ? 'pointer' : 'default' }}
+    >
       <div style={{ width: 46, flexShrink: 0, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.2 }}>
         {fmtDay(entry.date)}
       </div>
@@ -119,7 +123,7 @@ export function EntryRow({ entry, onDelete, currency }: { entry: Entry; onDelete
       </div>
       <Amount value={income ? entry.amount : -entry.amount} size="sm" signed={income} emphasis={income ? 'accent' : 'normal'} currency={currency} />
       <div className="sl-entry-delete" style={{ width: 28, flexShrink: 0 }}>
-        <IconButton label="Delete entry" size="sm" onClick={() => onDelete(entry.id)}><Icon name="trash-2" size={15} /></IconButton>
+        <IconButton label="Delete entry" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}><Icon name="trash-2" size={15} /></IconButton>
       </div>
     </div>
   );

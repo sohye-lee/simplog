@@ -18,9 +18,10 @@ interface OverviewPageProps {
   currency: Currency;
   onSeeAll: () => void;
   onDelete: (id: number) => void;
+  onEdit: (entry: Entry) => void;
 }
 
-export function OverviewPage({ income, spent, byCategory, bySubcat, categories, allEntries, month, recent, currency, onSeeAll, onDelete }: OverviewPageProps) {
+export function OverviewPage({ income, spent, byCategory, bySubcat, categories, allEntries, month, recent, currency, onSeeAll, onDelete, onEdit }: OverviewPageProps) {
   const [showCharts, setShowCharts] = useState(false);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -41,7 +42,7 @@ export function OverviewPage({ income, spent, byCategory, bySubcat, categories, 
       </Card>
       <Card padding="md">
         <SectionHeader title="Recent" right={<Button variant="ghost" size="sm" onClick={onSeeAll} trailingIcon={<Icon name="chevron-right" size={15} />}>See all</Button>} />
-        {recent.length ? recent.map((e) => <EntryRow key={e.id} entry={e} onDelete={onDelete} currency={currency} />)
+        {recent.length ? recent.map((e) => <EntryRow key={e.id} entry={e} onDelete={onDelete} onEdit={onEdit} currency={currency} />)
           : <EmptyState line="Nothing logged yet." hint="Tap Add to record your first entry." />}
       </Card>
     </div>

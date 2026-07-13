@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -12,30 +12,57 @@ import type { Currency, RecurringRule } from '../lib/types';
 import { nextOccurrence } from '../lib/recurring';
 import { todayISO } from '../lib/months';
 
-// A pill chip with an ✕ remove button.
-function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
+// A subcategory chip: rename inline, reorder with ‹ ›, remove with ✕.
+function SubChip({ value, canLeft, canRight, onRename, onMove, onRemove }: {
+  value: string;
+  canLeft: boolean;
+  canRight: boolean;
+  onRename: (next: string) => void;
+  onMove: (dir: -1 | 1) => void;
+  onRemove: () => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  const commit = () => { const v = draft.trim(); if (v && v !== value) onRename(v); else setDraft(value); };
+  const arrowBtn = (dir: -1 | 1, enabled: boolean) => (
+    <button type="button" disabled={!enabled} onClick={() => onMove(dir)} aria-label={dir === -1 ? 'Move left' : 'Move right'}
+      style={{ display: 'inline-flex', border: 'none', background: 'transparent', cursor: enabled ? 'pointer' : 'default', color: enabled ? 'var(--text-muted)' : 'var(--ink-200)', padding: '2px 1px' }}>
+      <Icon name={dir === -1 ? 'chevron-left' : 'chevron-right'} size={13} />
+    </button>
+  );
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 26, padding: '0 6px 0 10px', borderRadius: 'var(--radius-pill)', background: 'var(--surface-card)', border: '1px solid var(--border)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-      {label}
-      <button onClick={onRemove} aria-label={'Remove ' + label} style={{ display: 'inline-flex', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}><Icon name="x" size={13} /></button>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 1, height: 30, padding: '0 4px 0 4px', borderRadius: 'var(--radius-pill)', background: 'var(--surface-card)', border: '1px solid var(--border)' }}>
+      {arrowBtn(-1, canLeft)}
+      <input value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+        aria-label={'Rename ' + value}
+        style={{ width: `${Math.max(draft.length, 3) + 0.5}ch`, minWidth: '3ch', border: 'none', background: 'transparent', outline: 'none', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', padding: 0 }} />
+      {arrowBtn(1, canRight)}
+      <button type="button" onClick={onRemove} aria-label={'Remove ' + value} style={{ display: 'inline-flex', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px 2px 2px 3px', borderLeft: '1px solid var(--border)', marginLeft: 2 }}><Icon name="x" size={13} /></button>
     </span>
   );
 }
 
-// One category row: drag handle (order = importance) + expandable
-// subcategory editor.
-function CategoryEditorRow({ cat, subs, dragging, onHandleDown, onRemoveCategory, onAddSub, onRemoveSub }: {
+// One category row: drag handle (order = importance), editable name,
+// expandable subcategory editor.
+function CategoryEditorRow({ cat, subs, dragging, onHandleDown, onRenameCategory, onRemoveCategory, onAddSub, onRenameSub, onMoveSub, onRemoveSub }: {
   cat: string;
   subs: string[];
   dragging: boolean;
   onHandleDown: (e: ReactPointerEvent) => void;
+  onRenameCategory: (cat: string, next: string) => void;
   onRemoveCategory: (cat: string) => void;
   onAddSub: (cat: string, sub: string) => void;
+  onRenameSub: (cat: string, oldSub: string, next: string) => void;
+  onMoveSub: (cat: string, index: number, dir: -1 | 1) => void;
   onRemoveSub: (cat: string, sub: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [val, setVal] = useState('');
+  const [name, setName] = useState(cat);
+  useEffect(() => setName(cat), [cat]);
   const addSub = () => { const v = val.trim(); if (v && !subs.includes(v)) { onAddSub(cat, v); setVal(''); } };
+  const commitName = () => { const v = name.trim(); if (v && v !== cat) onRenameCategory(cat, v); else setName(cat); };
   return (
     <div style={{
       border: `1px solid ${dragging ? 'var(--border-focus)' : 'var(--border)'}`,
@@ -44,7 +71,7 @@ function CategoryEditorRow({ cat, subs, dragging, onHandleDown, onRemoveCategory
       opacity: dragging ? 0.95 : 1,
       background: 'var(--surface-card)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '10px 12px', background: 'var(--surface-sunken)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 10px', background: 'var(--surface-sunken)' }}>
         <span
           onPointerDown={onHandleDown}
           style={{ display: 'inline-flex', color: 'var(--text-muted)', cursor: 'grab', padding: '6px 6px 6px 0', touchAction: 'none' }}
@@ -52,17 +79,27 @@ function CategoryEditorRow({ cat, subs, dragging, onHandleDown, onRemoveCategory
         >
           <Icon name="grip" size={15} />
         </span>
-        <button onClick={() => setOpen((o) => !o)} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)', padding: 0 }}>
-          <span style={{ display: 'inline-flex', color: 'var(--text-muted)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms' }}><Icon name="chevron-right" size={14} /></span>
-          {cat}
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 400 }}>{subs.length} sub</span>
+        <button onClick={() => setOpen((o) => !o)} aria-label={open ? 'Collapse ' + cat : 'Expand ' + cat} style={{ display: 'inline-flex', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
+          <span style={{ display: 'inline-flex', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms' }}><Icon name="chevron-right" size={14} /></span>
         </button>
+        <input value={name} onChange={(e) => setName(e.target.value)} onBlur={commitName}
+          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+          aria-label={'Rename category ' + cat}
+          style={{ flex: 1, minWidth: 0, border: '1px solid transparent', borderRadius: 'var(--radius-xs)', background: 'transparent', outline: 'none', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)', padding: '4px 6px' }}
+          onFocus={(e) => { e.target.style.borderColor = 'var(--border-strong)'; e.target.style.background = 'var(--surface-card)'; }}
+          onBlurCapture={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.background = 'transparent'; }} />
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', flexShrink: 0 }}>{subs.length} sub</span>
         <button onClick={() => onRemoveCategory(cat)} aria-label={'Remove ' + cat} style={{ display: 'inline-flex', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><Icon name="trash-2" size={15} /></button>
       </div>
       {open && (
         <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {subs.map((s) => <Chip key={s} label={s} onRemove={() => onRemoveSub(cat, s)} />)}
+            {subs.map((s, i) => (
+              <SubChip key={s} value={s} canLeft={i > 0} canRight={i < subs.length - 1}
+                onRename={(next) => { if (next && !subs.includes(next)) onRenameSub(cat, s, next); }}
+                onMove={(dir) => onMoveSub(cat, i, dir)}
+                onRemove={() => onRemoveSub(cat, s)} />
+            ))}
             {subs.length === 0 && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>No subcategories yet.</span>}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -83,9 +120,12 @@ interface SettingsPageProps {
   recurring: RecurringRule[];
   onCurrency: (currency: Currency) => void;
   onAddCategory: (cat: string) => void;
+  onRenameCategory: (cat: string, next: string) => void;
   onRemoveCategory: (cat: string) => void;
   onReorderCategories: (categories: string[]) => void;
   onAddSub: (cat: string, sub: string) => void;
+  onRenameSub: (cat: string, oldSub: string, next: string) => void;
+  onMoveSub: (cat: string, index: number, dir: -1 | 1) => void;
   onRemoveSub: (cat: string, sub: string) => void;
   onRemoveRecurring: (id: number) => void;
   onReset: () => void;
@@ -94,7 +134,7 @@ interface SettingsPageProps {
   onSyncNow: () => Promise<void>;
 }
 
-export function SettingsPage({ currency, categories, subcats, recurring, onCurrency, onAddCategory, onRemoveCategory, onReorderCategories, onAddSub, onRemoveSub, onRemoveRecurring, onReset, onBackup, onImport, onSyncNow }: SettingsPageProps) {
+export function SettingsPage({ currency, categories, subcats, recurring, onCurrency, onAddCategory, onRenameCategory, onRemoveCategory, onReorderCategories, onAddSub, onRenameSub, onMoveSub, onRemoveSub, onRemoveRecurring, onReset, onBackup, onImport, onSyncNow }: SettingsPageProps) {
   const [newCat, setNewCat] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const add = () => { const v = newCat.trim(); if (v && !categories.includes(v)) { onAddCategory(v); setNewCat(''); } };
@@ -160,8 +200,11 @@ export function SettingsPage({ currency, categories, subcats, recurring, onCurre
                 subs={subcats[c] || []}
                 dragging={dragIdx === i}
                 onHandleDown={handleDown(i)}
+                onRenameCategory={onRenameCategory}
                 onRemoveCategory={onRemoveCategory}
                 onAddSub={onAddSub}
+                onRenameSub={onRenameSub}
+                onMoveSub={onMoveSub}
                 onRemoveSub={onRemoveSub}
               />
             </div>

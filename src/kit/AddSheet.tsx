@@ -96,9 +96,10 @@ interface AddSheetProps {
   subcats: Record<string, string[]>;
   currency: Currency;
   entries: Entry[];       // full history — feeds the Frequent chips
+  editing?: Entry | null; // set → the sheet edits this entry in place
 }
 
-export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, entries }: AddSheetProps) {
+export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, entries, editing = null }: AddSheetProps) {
   const [kind, setKind] = useState('Expense');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
@@ -110,8 +111,19 @@ export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, 
   const [calcExpr, setCalcExpr] = useState('');
 
   useEffect(() => {
-    if (open) { setKind('Expense'); setAmount(''); setCategory(''); setSub(''); setNote(''); setDate(todayISO()); setRepeat(''); setCalcOpen(false); setCalcExpr(''); }
-  }, [open]);
+    if (!open) return;
+    if (editing) {
+      setKind(editing.kind === 'income' ? 'Income' : 'Expense');
+      setAmount(String(editing.amount));
+      setCategory(editing.category);
+      setSub(editing.sub || '');
+      setNote(editing.note);
+      setDate(editing.date);
+    } else {
+      setKind('Expense'); setAmount(''); setCategory(''); setSub(''); setNote(''); setDate(todayISO());
+    }
+    setRepeat(''); setCalcOpen(false); setCalcExpr('');
+  }, [open, editing]);
 
   const presets = useMemo(() => frequentPresets(entries), [entries]);
 
@@ -133,7 +145,7 @@ export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, 
   const submit = () => {
     if (!canSave) return;
     const e: Entry = {
-      id: Date.now(),
+      id: editing ? editing.id : Date.now(),
       kind: kind.toLowerCase() as Entry['kind'],
       amount: Math.round((computed as number) * 100) / 100,
       category,
@@ -149,11 +161,11 @@ export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, 
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(12,13,10,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50, animation: 'slFade 160ms ease' }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 560, maxHeight: '90dvh', overflowY: 'auto', background: 'var(--surface-card)', borderTopLeftRadius: 'var(--radius-lg)', borderTopRightRadius: 'var(--radius-lg)', border: '1px solid var(--border)', borderBottom: 'none', boxShadow: 'var(--shadow-lg)', padding: 'var(--space-6)', paddingBottom: 'calc(var(--space-6) + env(safe-area-inset-bottom, 0px))', animation: 'slRise 220ms var(--ease-out)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>New entry</h3>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>{editing ? 'Edit entry' : 'New entry'}</h3>
           <IconButton label="Close" onClick={onClose}><Icon name="x" /></IconButton>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {presets.length > 0 && (
+          {!editing && presets.length > 0 && (
             <div>
               <div className="overline" style={{ marginBottom: 8 }}>Frequent</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -198,18 +210,22 @@ export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, 
           <Input label="Note" placeholder="e.g. Lunch — Kim's" value={note} onChange={(e) => setNote(e.target.value)} />
           <div style={{ display: 'flex', gap: 12 }}>
             <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            <Select label="Repeat" options={[
-              { value: '', label: 'No repeat' },
-              { value: 'monthly', label: 'Monthly' },
-              { value: 'weekly', label: 'Weekly' },
-            ]} value={repeat} onChange={(e) => setRepeat(e.target.value)} />
+            {!editing && (
+              <Select label="Repeat" options={[
+                { value: '', label: 'No repeat' },
+                { value: 'monthly', label: 'Monthly' },
+                { value: 'weekly', label: 'Weekly' },
+              ]} value={repeat} onChange={(e) => setRepeat(e.target.value)} />
+            )}
           </div>
           {repeat && (
             <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: -8 }}>
               Logs itself every {repeat === 'monthly' ? 'month' : 'week'} from the date above. Manage in Settings › Recurring.
             </div>
           )}
-          <Button variant="primary" size="lg" fullWidth disabled={!canSave} onClick={submit} leadingIcon={<Icon name="check" size={18} />}>Add entry</Button>
+          <Button variant="primary" size="lg" fullWidth disabled={!canSave} onClick={submit} leadingIcon={<Icon name="check" size={18} />}>
+            {editing ? 'Save changes' : 'Add entry'}
+          </Button>
         </div>
       </div>
     </div>

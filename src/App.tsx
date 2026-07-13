@@ -67,6 +67,7 @@ export default function App() {
   const [st, setSt] = useState<AppState>(loadState);
   const [month, setMonth] = useState<string>(thisMonth);
   const [sheet, setSheet] = useState(false);
+  const [editing, setEditing] = useState<Entry | null>(null);
   const [auth, setAuth] = useState<AuthPhase>(supabase ? 'loading' : 'local');
   const { entries, currency, categories, subcats, recurring, page } = st;
 
@@ -164,6 +165,64 @@ export default function App() {
     scheduleSync();
   };
 
+  // Editing reuses the add sheet; saving upserts by the same id.
+  const openEdit = (e: Entry) => { setEditing(e); setSheet(true); };
+  const closeSheet = () => { setSheet(false); setEditing(null); };
+  const submitEntry = (e: Entry, repeat?: Freq) => {
+    if (editing) {
+      setSt((s) => ({ ...s, entries: s.entries.map((x) => (x.id === e.id ? e : x)) }));
+      setMonth(monthOf(e.date));
+      enqueueAdd(e);           // upsert — same id overwrites the row
+      scheduleSync();
+    } else {
+      addEntry(e, repeat);
+    }
+  };
+
+  // Renaming a category/subcategory also rewrites the entries and
+  // recurring rules that reference it, then upserts the changed entries
+  // so the new names reach the server (settings sync alone won't move them).
+  const renameCategory = (oldName: string, next: string) => {
+    if (oldName === next || categories.includes(next)) return;
+    const changed = entries.filter((e) => e.category === oldName).map((e) => ({ ...e, category: next }));
+    setSt((s) => {
+      const subcats = { ...s.subcats };
+      if (oldName in subcats) { subcats[next] = subcats[oldName]; delete subcats[oldName]; }
+      return {
+        ...s,
+        categories: s.categories.map((c) => (c === oldName ? next : c)),
+        subcats,
+        entries: s.entries.map((e) => (e.category === oldName ? { ...e, category: next } : e)),
+        recurring: s.recurring.map((r) => (r.category === oldName ? { ...r, category: next } : r)),
+      };
+    });
+    changed.forEach(enqueueAdd);
+    markSettingsChanged();
+    scheduleSync();
+  };
+  const renameSub = (cat: string, oldSub: string, next: string) => {
+    if (oldSub === next || (subcats[cat] || []).includes(next)) return;
+    const changed = entries.filter((e) => e.category === cat && e.sub === oldSub).map((e) => ({ ...e, sub: next }));
+    setSt((s) => ({
+      ...s,
+      subcats: { ...s.subcats, [cat]: (s.subcats[cat] || []).map((x) => (x === oldSub ? next : x)) },
+      entries: s.entries.map((e) => (e.category === cat && e.sub === oldSub ? { ...e, sub: next } : e)),
+      recurring: s.recurring.map((r) => (r.category === cat && r.sub === oldSub ? { ...r, sub: next } : r)),
+    }));
+    changed.forEach(enqueueAdd);
+    markSettingsChanged();
+    scheduleSync();
+  };
+  const moveSub = (cat: string, index: number, dir: -1 | 1) => {
+    mutateSettings((s) => {
+      const list = [...(s.subcats[cat] || [])];
+      const j = index + dir;
+      if (j < 0 || j >= list.length) return s;
+      [list[index], list[j]] = [list[j], list[index]];
+      return { ...s, subcats: { ...s.subcats, [cat]: list } };
+    });
+  };
+
   const onExport = (format: ExportFormat) => exportMonth(format, sorted, month, currency);
 
   const onImport = (file: File) => {
@@ -210,10 +269,10 @@ export default function App() {
           <OverviewPage income={income} spent={spent} byCategory={byCategory} bySubcat={bySubcat}
             categories={categories} allEntries={entries} month={month}
             recent={sorted.slice(0, 4)} currency={currency}
-            onSeeAll={() => patch({ page: 'entries' })} onDelete={del} />
+            onSeeAll={() => patch({ page: 'entries' })} onDelete={del} onEdit={openEdit} />
         )}
         {page === 'entries' && (
-          <EntriesPage entries={monthEntries} categories={categories} currency={currency} onDelete={del} />
+          <EntriesPage entries={monthEntries} categories={categories} currency={currency} onDelete={del} onEdit={openEdit} />
         )}
         {page === 'export' && (
           <ExportPage entries={sorted} monthLabel={monthLabel(month)} onExport={onExport} />
@@ -226,9 +285,12 @@ export default function App() {
             recurring={recurring}
             onCurrency={(c) => changeSettings({ currency: c })}
             onAddCategory={(c) => mutateSettings((s) => ({ ...s, categories: [...s.categories, c], subcats: { ...s.subcats, [c]: [] } }))}
+            onRenameCategory={renameCategory}
             onRemoveCategory={(c) => mutateSettings((s) => { const sc = { ...s.subcats }; delete sc[c]; return { ...s, categories: s.categories.filter((x) => x !== c), subcats: sc }; })}
             onReorderCategories={(next) => changeSettings({ categories: next })}
             onAddSub={(cat, sub) => mutateSettings((s) => ({ ...s, subcats: { ...s.subcats, [cat]: [...(s.subcats[cat] || []), sub] } }))}
+            onRenameSub={renameSub}
+            onMoveSub={moveSub}
             onRemoveSub={(cat, sub) => mutateSettings((s) => ({ ...s, subcats: { ...s.subcats, [cat]: (s.subcats[cat] || []).filter((x) => x !== sub) } }))}
             onRemoveRecurring={(id) => mutateSettings((s) => ({ ...s, recurring: s.recurring.filter((r) => r.id !== id) }))}
             onReset={() => {
@@ -255,7 +317,7 @@ export default function App() {
         </div>
       )}
 
-      <AddSheet open={sheet} onClose={() => setSheet(false)} onAdd={addEntry} categories={categories} subcats={subcats} currency={currency} entries={entries} />
+      <AddSheet open={sheet} onClose={closeSheet} onAdd={submitEntry} categories={categories} subcats={subcats} currency={currency} entries={entries} editing={editing} />
     </div>
   );
 }

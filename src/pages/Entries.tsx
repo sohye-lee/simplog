@@ -10,9 +10,10 @@ interface EntriesPageProps {
   categories: string[];
   currency: Currency;
   onDelete: (id: number) => void;
+  onEdit: (entry: Entry) => void;
 }
 
-export function EntriesPage({ entries, categories, currency, onDelete }: EntriesPageProps) {
+export function EntriesPage({ entries, categories, currency, onDelete, onEdit }: EntriesPageProps) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('All');
   const chips = ['All', ...categories];
@@ -39,7 +40,7 @@ export function EntriesPage({ entries, categories, currency, onDelete }: Entries
       </div>
       <Card padding="md">
         <SectionHeader title={`${filtered.length} ${filtered.length === 1 ? 'entry' : 'entries'}`} />
-        {filtered.length ? filtered.map((e) => <EntryRow key={e.id} entry={e} onDelete={onDelete} currency={currency} />)
+        {filtered.length ? filtered.map((e) => <EntryRow key={e.id} entry={e} onDelete={onDelete} onEdit={onEdit} currency={currency} />)
           : <EmptyState line="No matching entries." hint="Try a different search or filter." />}
       </Card>
     </div>

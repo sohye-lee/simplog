@@ -4,7 +4,7 @@ import type { Currency } from '../lib/types';
 export const CURRENCY_SYMBOL: Record<Currency, string> = { KRW: '₩', USD: '$', EUR: '€', JPY: '¥', GBP: '£' };
 
 /**
- * Amount — the core money figure of Simplog. Renders a number as a
+ * Amount — the core money figure of Simplylog. Renders a number as a
  * tabular, right-alignable currency figure. This is the single most
  * repeated element in the product, so it lives as a primitive.
  */

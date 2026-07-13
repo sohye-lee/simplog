@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 export type SegmentOption = string | { value: string; label: string };
 
 /**
- * Segmented control — the Simplog toggle for small mutually-exclusive
+ * Segmented control — the Simplylog toggle for small mutually-exclusive
  * choices (Income / Expense, format pickers). The active segment gets
  * the lime fill.
  */

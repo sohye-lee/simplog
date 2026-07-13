@@ -14,8 +14,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff,woff2,ttf}'],
       },
       manifest: {
-        name: 'Simplog',
-        short_name: 'Simplog',
+        name: 'Simplylog',
+        short_name: 'Simplylog',
         description: 'A deliberately minimal personal expense tracker.',
         display: 'standalone',
         background_color: '#FBFBF6',

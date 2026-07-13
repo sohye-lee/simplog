@@ -1,8 +1,8 @@
 {
-  "name": "simplog",
+  "name": "simplylog",
   "private": true,
   "version": "0.1.0",
-  "description": "Simplog — a deliberately minimal personal expense tracker.",
+  "description": "Simplylog — a deliberately minimal personal expense tracker.",
   "type": "module",
   "scripts": {
     "dev": "vite",

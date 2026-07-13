@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { CSSProperties, InputHTMLAttributes, ReactNode } from 'react';
 
 /**
- * Simplog text/number input. For money entry pass `prefix="₩"` and
+ * Simplylog text/number input. For money entry pass `prefix="₩"` and
  * `align="right"` so the amount reads like a ledger figure.
  */
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'prefix'> {

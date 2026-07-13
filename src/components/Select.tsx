@@ -4,7 +4,7 @@ import type { CSSProperties, SelectHTMLAttributes } from 'react';
 export type SelectOption = string | { value: string; label: string };
 
 /**
- * Simplog select — a styled native <select> for category / month
+ * Simplylog select — a styled native <select> for category / month
  * pickers. Native keeps it accessible and simple.
  */
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {

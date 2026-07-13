@@ -1,7 +1,7 @@
 import type { CSSProperties, HTMLAttributes } from 'react';
 
 /**
- * CategoryBadge — a compact chip labelling a spend category. Simplog
+ * CategoryBadge — a compact chip labelling a spend category. Simplylog
  * stays monotone, so categories are told apart by their short label
  * and a small ink dot, not by color. `selected` fills it with lime.
  */

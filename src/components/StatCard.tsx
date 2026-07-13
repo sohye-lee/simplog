@@ -36,12 +36,15 @@ export function StatCard({
       containerType: 'inline-size',
       ...style,
     }}>
-      <span className="overline">{label}</span>
+      {/* delta sits beside the label so every card keeps the same height */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+        <span className="overline">{label}</span>
+        {delta != null && (
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{delta}</span>
+        )}
+      </div>
       {/* cqw: scales with the card so long figures (USD cents) never clip */}
       <Amount value={value} currency={currency} size="lg" style={{ fontSize: 'clamp(14px, 10.5cqw, var(--text-2xl))' }} />
-      {delta != null && (
-        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{delta}</span>
-      )}
     </div>
   );
 }

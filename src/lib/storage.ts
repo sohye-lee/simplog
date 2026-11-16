@@ -18,6 +18,8 @@ export function defaultState(): AppState {
     subcats: SUBCATEGORIES,
     catMode: 'twolevel',
     recurring: [],
+    importMappings: {},
+    merchantRules: {},
     page: 'overview',
   };
 }

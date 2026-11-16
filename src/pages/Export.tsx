@@ -11,6 +11,7 @@ interface ExportPageProps {
   entries: Entry[];
   monthLabel: string;
   onExport: (format: ExportFormat) => Promise<void>;
+  onImport: () => void;
 }
 
 const FORMAT_HINT: Record<ExportFormat, string> = {
@@ -19,7 +20,7 @@ const FORMAT_HINT: Record<ExportFormat, string> = {
   PDF: 'A monthly statement — summary, category breakdown, and the full ledger.',
 };
 
-export function ExportPage({ entries, monthLabel, onExport }: ExportPageProps) {
+export function ExportPage({ entries, monthLabel, onExport, onImport }: ExportPageProps) {
   const [fmt, setFmt] = useState<ExportFormat>('CSV');
   const [busy, setBusy] = useState(false);
   const count = entries.length;
@@ -31,6 +32,15 @@ export function ExportPage({ entries, monthLabel, onExport }: ExportPageProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <Card padding="md">
+        <SectionHeader title="Import from your bank" />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            Upload a CSV or Excel export from any bank or card. Columns and categories are filled in for you to review.
+          </div>
+          <Button variant="secondary" onClick={onImport} leadingIcon={<Icon name="plus" size={16} />} style={{ flexShrink: 0 }}>Import</Button>
+        </div>
+      </Card>
       <Card padding="lg">
         <SectionHeader title="Export this month" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>

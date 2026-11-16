@@ -156,7 +156,10 @@ export async function fullSync(state: AppState): Promise<Partial<AppState> | nul
     const { data: remote, error: settingsErr } = await supabase.from('settings').select('data, updated_at').maybeSingle();
     if (settingsErr) throw settingsErr;
     let settingsPatch: Partial<AppState> = {};
-    const localData = { currency: state.currency, categories: state.categories, subcats: state.subcats, catMode: state.catMode, recurring: state.recurring };
+    const localData = {
+      currency: state.currency, categories: state.categories, subcats: state.subcats, catMode: state.catMode,
+      recurring: state.recurring, importMappings: state.importMappings, merchantRules: state.merchantRules,
+    };
     const localNewer = localAt && (!remote || new Date(localAt).getTime() > new Date(remote.updated_at).getTime());
     if (!remote || localNewer) {
       const { error } = await supabase.from('settings').upsert({

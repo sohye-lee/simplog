@@ -6,6 +6,8 @@ import { Icon } from './components/Icon';
 import type { IconName } from './components/Icon';
 import { MonthStepper } from './kit/pieces';
 import { AddSheet } from './kit/AddSheet';
+import { ImportSheet } from './kit/ImportSheet';
+import type { ImportResult } from './kit/ImportSheet';
 import { SignInScreen } from './kit/SignInScreen';
 import { OverviewPage } from './pages/Overview';
 import { EntriesPage } from './pages/Entries';
@@ -23,7 +25,7 @@ import { supabase } from './lib/supabase';
 const NAV: Array<{ id: Page; label: string; icon: IconName }> = [
   { id: 'overview', label: 'Overview', icon: 'home' },
   { id: 'entries', label: 'Entries', icon: 'list' },
-  { id: 'export', label: 'Export', icon: 'download' },
+  { id: 'export', label: 'Files', icon: 'download' },
   { id: 'settings', label: 'Settings', icon: 'sliders' },
 ];
 
@@ -67,6 +69,7 @@ export default function App() {
   const [st, setSt] = useState<AppState>(loadState);
   const [month, setMonth] = useState<string>(thisMonth);
   const [sheet, setSheet] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Entry | null>(null);
   const [auth, setAuth] = useState<AuthPhase>(supabase ? 'loading' : 'local');
   const { entries, currency, categories, subcats, recurring, page } = st;
@@ -262,6 +265,22 @@ export default function App() {
 
   const onExport = (format: ExportFormat) => exportMonth(format, sorted, month, currency);
 
+  // Statement import: add the reviewed rows, remember the bank's format and
+  // how each merchant was filed (both sync with settings).
+  const onStatementImport = ({ entries: added, mapping, rules }: ImportResult) => {
+    setSt((s) => ({
+      ...s,
+      entries: [...added, ...s.entries],
+      importMappings: mapping ? { ...s.importMappings, [mapping.signature]: mapping.mapping } : s.importMappings,
+      merchantRules: { ...s.merchantRules, ...rules },
+    }));
+    added.forEach(enqueueAdd);
+    markSettingsChanged();
+    scheduleSync();
+    const latest = added.reduce((m, e) => (e.date > m ? e.date : m), '');
+    if (latest) setMonth(monthOf(latest));
+  };
+
   const onImport = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -312,7 +331,7 @@ export default function App() {
           <EntriesPage entries={monthEntries} categories={categories} currency={currency} onDelete={del} onEdit={openEdit} />
         )}
         {page === 'export' && (
-          <ExportPage entries={sorted} monthLabel={monthLabel(month)} onExport={onExport} />
+          <ExportPage entries={sorted} monthLabel={monthLabel(month)} onExport={onExport} onImport={() => setImportOpen(true)} />
         )}
         {page === 'settings' && (
           <SettingsPage
@@ -357,6 +376,9 @@ export default function App() {
       )}
 
       <AddSheet open={sheet} onClose={closeSheet} onAdd={submitEntry} categories={categories} subcats={subcats} currency={currency} entries={entries} editing={editing} />
+      <ImportSheet open={importOpen} onClose={() => setImportOpen(false)} onImport={onStatementImport}
+        categories={categories} subcats={subcats} entries={entries}
+        importMappings={st.importMappings} merchantRules={st.merchantRules} currency={currency} />
     </div>
   );
 }

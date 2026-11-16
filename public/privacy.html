@@ -40,7 +40,7 @@
     </div>
 
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: July 13, 2026</p>
+    <p class="updated">Last updated: November 15, 2026</p>
 
     <p class="lead">SimplyLog is a personal expense tracker. We collect as little as possible and never sell your data.</p>
 
@@ -49,6 +49,7 @@
       <li><strong>Your email address</strong> — used only to sign you in (a one-time code is emailed to you) and to sync your data across your devices.</li>
       <li><strong>The entries you create</strong> — amount, category, subcategory, note, and date for each expense or income you log, plus your category list and app settings (currency, recurring rules).</li>
       <li><strong>Anonymous usage analytics</strong> — via Google Analytics, we collect aggregated, non-identifying information about how the app is used (screens viewed, features used, device type, approximate region, and a random analytics identifier) to understand and improve SimplyLog. This is never linked to your entries or your identity, and IP addresses are anonymized. It is disabled if your browser sends a "Do Not Track" signal.</li>
+      <li><strong>Statement imports (only when you use Import)</strong> — when you import a transaction file from your bank or card, the file is read on your device. The first time a file layout is seen, its first rows (column names and a few sample transactions) are sent to Anthropic's Claude AI to work out which column is which; transaction descriptions (merchant names, without amounts) are sent to suggest categories. Layouts and merchant categories are then remembered in your account, so later imports of the same kind are processed on your device. Only the transactions you choose to import are saved.</li>
     </ul>
     <p>We do <strong>not</strong> collect your name, contacts, or precise location, we do <strong>not</strong> use advertising identifiers, we do <strong>not</strong> show ads, and we never sell your data or use it to track you across other companies' apps or websites.</p>
 
@@ -61,6 +62,7 @@
       <li><strong>Resend</strong> — sends the sign-in code emails.</li>
       <li><strong>Vercel</strong> — hosts the web app.</li>
       <li><strong>Google Analytics</strong> — anonymous, aggregated usage measurement.</li>
+      <li><strong>Anthropic</strong> — the Claude AI that reads imported statement layouts and suggests categories. Under Anthropic's commercial terms, data sent through its API is not used to train its models.</li>
     </ul>
     <p>These providers process data only to run SimplyLog on our behalf and under their own security and privacy commitments.</p>
 

@@ -7,6 +7,10 @@
 //    card payments / own-account transfers, and likely duplicates.
 // 4. Suggest a merchant name + category: remembered merchants first, the AI
 //    for the rest (descriptions only — amounts never leave the device here).
+//
+// PDF statements have no columns to map, so their transaction lines (only
+// lines with a date and an amount, account numbers masked) go to the AI,
+// which lists the transactions directly; steps 3–4 then run as above.
 import { supabase } from './supabase';
 import type { Entry, ImportMapping, Kind, MerchantRule } from './types';
 import { INCOME_CATS } from './data';
@@ -188,6 +192,35 @@ export function cleanNote(raw: string): string {
   return titleCase(t || raw).slice(0, 40);
 }
 
+/** One parsed transaction → a review row (duplicate check + merchant memory). */
+export interface RawTxn { date: string; raw: string; amount: number; kind: Kind; transfer: boolean }
+
+export function toImportRows(
+  txns: RawTxn[],
+  existing: Entry[],
+  rules: Record<string, MerchantRule>,
+): ImportRow[] {
+  const seen = new Set(existing.map((e) => `${e.date}|${e.kind}|${Math.round(e.amount * 100)}`));
+  return txns
+    .map((t, i): ImportRow => {
+      const amount = Math.round(Math.abs(t.amount) * 100) / 100;
+      const isDup = seen.has(`${t.date}|${t.kind}|${Math.round(amount * 100)}`);
+      const mk = merchantKey(t.raw);
+      const rule = rules[mk];
+      return {
+        key: `${i}`,
+        date: t.date, raw: t.raw, amount, kind: t.kind,
+        note: rule?.note || cleanNote(t.raw),
+        category: rule && rule.kind === t.kind ? rule.category : t.kind === 'income' ? 'Other' : '',
+        sub: rule && rule.kind === t.kind ? rule.sub : undefined,
+        include: !t.transfer && !isDup,
+        reason: t.transfer ? 'transfer' : isDup ? 'duplicate' : undefined,
+        merchantKey: mk,
+      };
+    })
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
 export function buildRows(
   file: ParsedFile,
   existing: Entry[],
@@ -196,34 +229,136 @@ export function buildRows(
   const m = file.mapping;
   const skipTypes = new Set(m.skipTypeValues.map((v) => v.toLowerCase().trim()));
   const skipPats = m.skipDescriptionPatterns.map((p) => p.toLowerCase().trim()).filter((p) => p.length >= 4);
-  const seen = new Set(existing.map((e) => `${e.date}|${e.kind}|${Math.round(e.amount * 100)}`));
-  const out: ImportRow[] = [];
+  const txns: RawTxn[] = [];
 
-  file.rows.slice(m.headerRowIndex + 1).forEach((r, i) => {
+  file.rows.slice(m.headerRowIndex + 1).forEach((r) => {
     const date = parseDate(r[m.dateColumn] ?? '', m.dateOrder);
     const signed = rowAmount(r, m);
     if (!date || signed === null || signed === 0) return;
     const raw = r[m.descriptionColumn] || '';
-    const kind: Kind = signed > 0 ? 'expense' : 'income';
-    const amount = Math.round(Math.abs(signed) * 100) / 100;
     const type = m.typeColumn >= 0 ? (r[m.typeColumn] ?? '').toLowerCase().trim() : '';
     const lower = raw.toLowerCase();
-    const isTransfer = (type && skipTypes.has(type)) || skipPats.some((p) => lower.includes(p));
-    const isDup = seen.has(`${date}|${kind}|${Math.round(amount * 100)}`);
-    const mk = merchantKey(raw);
-    const rule = rules[mk];
-    out.push({
-      key: `${i}`,
-      date, raw, amount, kind,
-      note: rule?.note || cleanNote(raw),
-      category: rule && rule.kind === kind ? rule.category : kind === 'income' ? 'Other' : '',
-      sub: rule && rule.kind === kind ? rule.sub : undefined,
-      include: !isTransfer && !isDup,
-      reason: isTransfer ? 'transfer' : isDup ? 'duplicate' : undefined,
-      merchantKey: mk,
-    });
+    const transfer = Boolean((type && skipTypes.has(type)) || skipPats.some((p) => lower.includes(p)));
+    txns.push({ date, raw, amount: signed, kind: signed > 0 ? 'expense' : 'income', transfer });
   });
-  return out.sort((a, b) => (a.date < b.date ? 1 : -1));
+  return toImportRows(txns, existing, rules);
+}
+
+// ── PDF statements (bank-generated, with real text — not scans) ────
+
+const DATE_TOKEN = /\b(\d{1,2}\/\d{1,2}(\/\d{2,4})?|\d{4}-\d{2}-\d{2}|(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2})\b/i;
+const MONEY_TOKEN = /\(?-?\$?\s?\d{1,3}(,\d{3})*\.\d{2}\)?-?/;
+const PERIOD_WORDS = /(period|statement|closing|opening|billing|cycle|through)/i;
+// Summary rows (balances, limits, totals) are not transactions — never sent.
+const SUMMARY_WORDS = /(balance|minimum payment|payment due|credit limit|available credit|past due|annual percentage|\btotals?\s+(fees|interest|charged|payments|purchases|credits|deposits|withdrawals|for|this))/i;
+
+/** Text lines of a PDF, in reading order. Throws for image-only (scanned) PDFs. */
+export async function readPdfLines(file: File): Promise<string[]> {
+  const pdfjs = await import('pdfjs-dist');
+  const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+  pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+  let doc;
+  try {
+    doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  } catch (e) {
+    if (e instanceof Error && e.name === 'PasswordException') throw new Error('This PDF is password-protected. Download it again without a password.');
+    throw new Error("Couldn't open this PDF.");
+  }
+  const lines: string[] = [];
+  for (let p = 1; p <= Math.min(doc.numPages, 40); p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    // Group text pieces into lines by their baseline, then left→right.
+    const byY: Array<{ y: number; parts: Array<{ x: number; w: number; h: number; s: string }> }> = [];
+    for (const it of content.items) {
+      if (!('str' in it) || !it.str.trim()) continue;
+      const [x, y] = [it.transform[4], it.transform[5]];
+      let row = byY.find((r) => Math.abs(r.y - y) < 3);
+      if (!row) { row = { y, parts: [] }; byY.push(row); }
+      row.parts.push({ x, w: it.width, h: it.height || 10, s: it.str });
+    }
+    byY.sort((a, b) => b.y - a.y).forEach((r) => {
+      r.parts.sort((a, b) => a.x - b.x);
+      let line = '';
+      let end = -Infinity;
+      for (const part of r.parts) {
+        const gap = part.x - end;
+        // A word space vs. a column gap (two spaces keeps columns apart).
+        line += !line ? part.s : gap > part.h * 1.2 ? '  ' + part.s : gap > 1 ? ' ' + part.s : part.s;
+        end = part.x + part.w;
+      }
+      lines.push(line.replace(/\s{3,}/g, '  ').trim());
+    });
+  }
+  if (lines.join('').replace(/\s/g, '').length < 40) {
+    throw new Error("This PDF has no readable text (it may be a scan). Download the statement from your bank's website instead.");
+  }
+  return lines;
+}
+
+/** Hide account / card numbers: any long run of digits. */
+export function maskNumbers(s: string): string {
+  return s.replace(/\b(?:\d[ -]?){8,}\d\b/g, '••••').replace(/(x{2,}|\*{2,})\d{2,}/gi, '••••');
+}
+
+/**
+ * Keep only what the AI needs: lines that look like a transaction (a date
+ * and an amount), plus a few statement-period lines so it knows the year.
+ * Balances, addresses and summary blocks without a date stay on the device.
+ */
+export function pdfTransactionLines(lines: string[]): { context: string[]; lines: string[] } {
+  const context: string[] = [];
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (SUMMARY_WORDS.test(l) || !DATE_TOKEN.test(l)) continue;
+    const next = lines[i + 1] ?? '';
+    if (MONEY_TOKEN.test(l)) {
+      out.push(maskNumbers(l));
+    } else if (PERIOD_WORDS.test(l)) {
+      if (context.length < 4) context.push(maskNumbers(l).slice(0, 160));
+    } else if (MONEY_TOKEN.test(next) && !DATE_TOKEN.test(next) && !SUMMARY_WORDS.test(next)) {
+      out.push(maskNumbers(`${l}  ${next}`));   // amount wrapped onto the next line
+      i++;
+    }
+  }
+  return { context, lines: out.map((l) => l.slice(0, 200)) };
+}
+
+export async function extractPdfTransactions(
+  file: File,
+  onProgress?: (done: number, total: number) => void,
+): Promise<{ institution: string; txns: RawTxn[] }> {
+  const { context, lines } = pdfTransactionLines(await readPdfLines(file));
+  if (lines.length === 0) throw new Error('No transactions found in this PDF.');
+  type Res = { institution?: string; transactions?: Array<{ line: number; date: string; description: string; amount: number; kind: Kind; transfer: boolean }> };
+  // Small chunks, 3 at a time: each AI call stays short and well under the
+  // edge function's time limit even for a long statement.
+  const CHUNK = 80;
+  const chunks: string[][] = [];
+  for (let i = 0; i < lines.length; i += CHUNK) chunks.push(lines.slice(i, i + CHUNK));
+  const results: Res[] = new Array(chunks.length);
+  let done = 0;
+  onProgress?.(0, chunks.length);
+  for (let i = 0; i < chunks.length; i += 3) {
+    await Promise.all(chunks.slice(i, i + 3).map(async (chunk, j) => {
+      results[i + j] = await invokeAI<Res>({ action: 'extract', context, lines: chunk });
+      onProgress?.(++done, chunks.length);
+    }));
+  }
+  const txns: RawTxn[] = [];
+  let institution = 'Unknown';
+  for (const data of results) {
+    if (data?.institution && data.institution !== 'Unknown') institution = data.institution;
+    for (const t of data?.transactions ?? []) {
+      const date = parseDate(String(t.date ?? ''), 'YMD');
+      const amount = Math.abs(Number(t.amount));
+      if (!date || !Number.isFinite(amount) || amount === 0) continue;
+      txns.push({ date, raw: String(t.description ?? '').slice(0, 140), amount, kind: t.kind === 'income' ? 'income' : 'expense', transfer: Boolean(t.transfer) });
+    }
+  }
+  if (txns.length === 0) throw new Error('No transactions found in this PDF.');
+  return { institution, txns };
 }
 
 // ── 4. Categorizing (AI for merchants we haven't seen) ─────────────

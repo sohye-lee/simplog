@@ -36,7 +36,7 @@ export function ExportPage({ entries, monthLabel, onExport, onImport }: ExportPa
         <SectionHeader title="Import from your bank" />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
           <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            Upload a CSV or Excel export from any bank or card. Columns and categories are filled in for you to review.
+            Upload a CSV, Excel, or PDF statement from any bank or card. Columns and categories are filled in for you to review.
           </div>
           <Button variant="secondary" onClick={onImport} leadingIcon={<Icon name="plus" size={16} />} style={{ flexShrink: 0 }}>Import</Button>
         </div>

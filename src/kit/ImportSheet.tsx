@@ -8,8 +8,10 @@ import { Amount } from '../components/Amount';
 import type { Currency, Entry, ImportMapping, MerchantRule } from '../lib/types';
 import { INCOME_CATS } from '../lib/data';
 import { fmtDay } from '../lib/months';
-import { readRows, detectFormat, buildRows, categorizeRows } from '../lib/importer';
+import { readRows, detectFormat, buildRows, categorizeRows, extractPdfTransactions, toImportRows } from '../lib/importer';
 import type { ImportRow, ParsedFile } from '../lib/importer';
+
+const isPdf = (f: File) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
 
 export interface ImportResult {
   entries: Entry[];
@@ -38,6 +40,7 @@ export function ImportSheet(p: ImportSheetProps) {
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [parsed, setParsed] = useState<ParsedFile | null>(null);
   const [fileName, setFileName] = useState('');
+  const [institution, setInstitution] = useState('Unknown');
   const fileRef = useRef<HTMLInputElement>(null);
   const lastFile = useRef<File | null>(null);
 
@@ -49,12 +52,26 @@ export function ImportSheet(p: ImportSheetProps) {
     lastFile.current = file;
     setFileName(file.name);
     try {
+      if (isPdf(file)) {
+        setStage({ name: 'working', msg: 'Reading PDF…' });
+        setParsed(null);
+        const { institution: inst, txns } = await extractPdfTransactions(file, (done, total) =>
+          setStage({ name: 'working', msg: total > 1 ? `Finding transactions… ${done}/${total}` : 'Finding transactions…' }));
+        setInstitution(inst);
+        const built = toImportRows(txns, p.entries, p.merchantRules);
+        const unknown = new Set(built.filter((r) => !r.category).map((r) => r.merchantKey)).size;
+        setStage({ name: 'working', msg: unknown ? `Categorizing ${unknown} merchant${unknown === 1 ? '' : 's'}…` : 'Almost done…' });
+        setRows(await categorizeRows(built, p.categories, p.subcats));
+        setStage({ name: 'review' });
+        return;
+      }
       setStage({ name: 'working', msg: 'Reading file…' });
       const raw = await readRows(file);
       if (raw.length < 2) throw new Error('This file is empty.');
       setStage({ name: 'working', msg: force ? 'Re-reading the format…' : 'Figuring out the format…' });
       const pf = await detectFormat(raw, p.importMappings, force);
       setParsed(pf);
+      setInstitution(pf.mapping.institution);
       const built = buildRows(pf, p.entries, p.merchantRules);
       if (built.length === 0) throw new Error('No transactions found in this file.');
       const unknown = new Set(built.filter((r) => !r.category).map((r) => r.merchantKey)).size;
@@ -121,9 +138,9 @@ export function ImportSheet(p: ImportSheetProps) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 12px' }}>
           <div style={{ minWidth: 0 }}>
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>{stage.name === 'review' ? 'Review import' : 'Import statement'}</h3>
-            {stage.name === 'review' && parsed && (
+            {stage.name === 'review' && (
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {parsed.mapping.institution !== 'Unknown' ? `${parsed.mapping.institution} · ` : ''}{fileName}
+                {institution !== 'Unknown' ? `${institution} · ` : ''}{fileName}
               </div>
             )}
           </div>
@@ -133,15 +150,16 @@ export function ImportSheet(p: ImportSheetProps) {
         {stage.name === 'pick' && (
           <div style={{ padding: '4px 24px calc(24px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Download your transactions as CSV or Excel from your bank or card website, then choose the file here.
-              Any bank's format works — SimplyLog reads the columns, skips card payments and transfers between your own accounts,
-              and suggests a category for each purchase. You review everything before it's saved.
+              Download your transactions as CSV or Excel from your bank or card website — or a PDF statement if that's all
+              it offers — then choose the file here. Any bank's format works: SimplyLog reads it, skips card payments and
+              transfers between your own accounts, and suggests a category for each purchase. You review everything before it's saved.
             </div>
             <Button variant="primary" size="lg" fullWidth onClick={() => fileRef.current?.click()} leadingIcon={<Icon name="file-down" size={18} />}>Choose file</Button>
-            <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,.txt,text/csv" style={{ display: 'none' }}
+            <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,.txt,.pdf,text/csv,application/pdf" style={{ display: 'none' }}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) run(f); e.target.value = ''; }} />
             <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-              The first time a bank's format is seen, its first rows are sent to an AI service to read the layout; merchant names are sent to suggest categories. Formats and merchants are remembered, so repeat imports stay on your device.
+              CSV/Excel: the first time a bank's format is seen, its first rows are sent to an AI service to read the layout; merchant names are sent to suggest categories. Formats and merchants are remembered, so repeat imports stay on your device.
+              PDF: the statement's transaction lines (date, description, amount — account numbers hidden) are sent to the AI each time. PDFs must come from your bank's website; scanned paper statements can't be read.
             </div>
           </div>
         )}
@@ -170,7 +188,7 @@ export function ImportSheet(p: ImportSheetProps) {
               </span>
               <span style={{ display: 'flex', gap: 4 }}>
                 <Button variant="ghost" size="sm" onClick={flipAll}>Flip in/out</Button>
-                <Button variant="ghost" size="sm" onClick={() => lastFile.current && run(lastFile.current, true)}>Re-read format</Button>
+                <Button variant="ghost" size="sm" onClick={() => lastFile.current && run(lastFile.current, true)}>{parsed ? 'Re-read format' : 'Re-read file'}</Button>
               </span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '4px 24px' }}>

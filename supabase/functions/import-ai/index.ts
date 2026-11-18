@@ -5,6 +5,8 @@
 //                         which rows are transfers/card payments to skip.
 //   action "categorize" → turn raw bank descriptions into a clean merchant
 //                         name + one of the user's own categories.
+//   action "extract"    → list the transactions in text lines taken from a
+//                         bank-generated PDF statement.
 //
 // Only signed-in users can call this. The gateway's JWT check alone is not
 // enough — the public anon key is itself a valid JWT — so every request is
@@ -19,6 +21,7 @@ const MODEL = "claude-opus-5-5";
 const MAX_SAMPLE_ROWS = 25;
 const MAX_CELL = 160;
 const MAX_DESCRIPTIONS = 120;
+const MAX_PDF_LINES = 150;
 
 const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
 const auth = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "");
@@ -72,6 +75,20 @@ const CategorizeSchema = z.object({
   ),
 });
 
+const ExtractSchema = z.object({
+  institution: z.string(),
+  transactions: z.array(
+    z.object({
+      line: z.number().int(),
+      date: z.string(),
+      description: z.string(),
+      amount: z.number(),
+      kind: z.enum(["expense", "income"]),
+      transfer: z.boolean(),
+    }),
+  ),
+});
+
 // ── Prompts ─────────────────────────────────────────────────────────
 
 const MAP_SYSTEM = `You read the first rows of a transaction export downloaded from a US bank, credit card, or brokerage (Chase, Capital One, Robinhood, Amex, Bank of America, Citi, Discover, Wells Fargo, credit unions, and others). Rows are given as JSON arrays of cell strings, numbered from 0. The file may start with title or account-summary lines before the real header row.
@@ -96,7 +113,45 @@ For every item return:
 - sub: exactly one subcategory listed under the chosen category, or "" when none fits or the category has none.
 Return one result per input index.`;
 
+const EXTRACT_SYSTEM = `You read text lines taken from a PDF statement issued by a US bank, credit card, or brokerage. Each line is numbered. Only lines that contain a date and an amount were kept, so some are not transactions (balances, totals, summary rows) — leave those out. A few statement-period lines may be given first so you know the year.
+
+Return every real transaction once:
+- line: the number of the line it came from.
+- date: the transaction date as YYYY-MM-DD. Statements often omit the year; take it from the statement period (a December transaction on a January statement belongs to the previous year).
+- description: the merchant/payee text exactly as written on the line, without the date or amount.
+- amount: the absolute amount as a positive number.
+- kind: "expense" for money spent (purchases, fees, interest charged, withdrawals); "income" for money received (deposits, paychecks, refunds, credits, dividends, interest earned).
+- transfer: true for rows that are not real spending or income — payments to the card itself, transfers between the person's own accounts, buys/sells of stocks or crypto. They are still listed.
+On a credit card statement, purchases are expenses even when printed without a sign, and payments/credits are shown as negative or in a separate section.
+- institution: the bank/card name if you can tell, else "Unknown".
+Do not invent transactions; if no line is a transaction, return an empty list.`;
+
 // ── Handlers ────────────────────────────────────────────────────────
+
+async function extract(payload: Record<string, unknown>): Promise<Response> {
+  const lines = Array.isArray(payload.lines) ? payload.lines.slice(0, MAX_PDF_LINES).map((l) => clip(l, 200)) : [];
+  if (lines.length === 0) return json({ institution: "Unknown", transactions: [] });
+  const context = Array.isArray(payload.context) ? payload.context.slice(0, 4).map((l) => clip(l, 160)) : [];
+  const body = [
+    context.length ? `Statement period lines:\n${context.join("\n")}\n` : "",
+    "Lines:",
+    ...lines.map((l, i) => `${i}: ${l}`),
+  ].join("\n");
+
+  const response = await client.beta.messages.parse({
+    model: MODEL,
+    max_tokens: 16000,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    output_config: { effort: "low", format: betaZodOutputFormat(ExtractSchema) },
+    system: EXTRACT_SYSTEM,
+    messages: [{ role: "user", content: body }],
+  });
+  if (response.stop_reason === "refusal" || !response.parsed_output) {
+    return json({ error: "Couldn't read this PDF." }, 422);
+  }
+  return json(response.parsed_output);
+}
 
 function clip(s: unknown, n: number): string {
   return String(s ?? "").slice(0, n);
@@ -173,6 +228,7 @@ Deno.serve(async (req) => {
   try {
     if (payload.action === "map") return await mapColumns(payload.rows);
     if (payload.action === "categorize") return await categorize(payload);
+    if (payload.action === "extract") return await extract(payload);
     return json({ error: "Unknown action" }, 400);
   } catch (err) {
     if (err instanceof Anthropic.RateLimitError) return json({ error: "AI is busy — try again in a minute." }, 429);

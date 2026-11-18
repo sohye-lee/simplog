@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 // Never reach the real backend from tests (the repo's .env points at prod).
 vi.mock('./supabase', () => ({ supabase: null }));
 
-import { readRows, detectFormat, buildRows, categorizeRows, parseAmount, parseDate, merchantKey, rowSignature, cleanNote } from './importer';
+import { readRows, detectFormat, buildRows, categorizeRows, parseAmount, parseDate, merchantKey, rowSignature, cleanNote, pdfTransactionLines, maskNumbers, toImportRows } from './importer';
 import type { Entry, ImportMapping, MerchantRule } from './types';
 
 const csv = (name: string, text: string) => new File([text], name, { type: 'text/csv' });
@@ -122,6 +122,57 @@ Date,Description,Amount
     const out = buildRows(pf, [], {});
     expect(out.find((r) => r.raw.startsWith('TRADER'))).toMatchObject({ date: '2026-10-28', amount: 54.2, kind: 'expense', include: true });
     expect(out.find((r) => r.raw.startsWith('Payment'))).toMatchObject({ include: false });
+  });
+});
+
+describe('PDF statement lines', () => {
+  const page = [
+    'Jane Doe  123 Main St  Oakland CA 94612',
+    'Account number  4147 2019 8820 1234',
+    'Opening/Closing Date 09/29/26 - 10/28/26',
+    'Previous Balance  $1,204.55',
+    'New Balance  $842.10',
+    'Payment Due Date 11/25/26  Minimum Payment Due $35.00',
+    '09/30  10/01  PAYMENT THANK YOU-MOBILE  -$1,204.55',
+    '10/02  10/03  SQ *BLUE BOTTLE COFFEE OAKLAND CA  6.45',
+    '10/05  AMAZON MKTP US*2K4L19',
+    '42.10',
+    'Card ending XXXX1234  Total fees charged in 2026 $0.00',
+  ];
+  const out = pdfTransactionLines(page);
+
+  it('keeps transaction lines and joins a wrapped amount', () => {
+    expect(out.lines).toEqual([
+      '09/30  10/01  PAYMENT THANK YOU-MOBILE  -$1,204.55',
+      '10/02  10/03  SQ *BLUE BOTTLE COFFEE OAKLAND CA  6.45',
+      '10/05  AMAZON MKTP US*2K4L19  42.10',
+    ]);
+  });
+  it('keeps the statement period for the year, and nothing personal', () => {
+    expect(out.context).toEqual(['Opening/Closing Date 09/29/26 - 10/28/26']);
+    const sent = [...out.context, ...out.lines].join('\n');
+    expect(sent).not.toMatch(/Main St|4147|Balance|Minimum|35\.00/);
+  });
+  it('masks card and account numbers', () => {
+    expect(maskNumbers('ACH 1234567890123 DEPOSIT')).toBe('ACH •••• DEPOSIT');
+    expect(maskNumbers('card XXXX1234')).toBe('card ••••');
+    expect(maskNumbers('10/02/2026 $1,234.56')).toBe('10/02/2026 $1,234.56');
+  });
+});
+
+describe('toImportRows (PDF path)', () => {
+  it('flags transfers and duplicates like the CSV path', () => {
+    const existing: Entry[] = [{ id: 1, kind: 'expense', amount: 6.45, category: 'Food', note: 'Coffee', date: '2026-10-02' }];
+    const out = toImportRows([
+      { date: '2026-10-02', raw: 'SQ *BLUE BOTTLE COFFEE', amount: 6.45, kind: 'expense', transfer: false },
+      { date: '2026-09-30', raw: 'PAYMENT THANK YOU', amount: 1204.55, kind: 'income', transfer: true },
+      { date: '2026-10-05', raw: 'AMAZON MKTP US*2K4L19', amount: 42.1, kind: 'expense', transfer: false },
+    ], existing, {});
+    expect(out.map((r) => [r.date, r.include, r.reason])).toEqual([
+      ['2026-10-05', true, undefined],
+      ['2026-10-02', false, 'duplicate'],
+      ['2026-09-30', false, 'transfer'],
+    ]);
   });
 });
 

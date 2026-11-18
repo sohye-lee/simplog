@@ -6,12 +6,14 @@
 //   action "categorize" → turn raw bank descriptions into a clean merchant
 //                         name + one of the user's own categories.
 //
-// Only signed-in users can call this (Supabase verifies the JWT before the
-// request reaches us). The Anthropic key lives in the function's secrets:
-//   supabase secrets set ANTHROPIC_API_KEY=...
+// Only signed-in users can call this. The gateway's JWT check alone is not
+// enough — the public anon key is itself a valid JWT — so every request is
+// checked against Supabase Auth for a real user. The Anthropic key lives in
+// the function's secrets (ANTHROPIC_API_KEY).
 import Anthropic from "npm:@anthropic-ai/sdk@1.8.0";
 import { betaZodOutputFormat } from "npm:@anthropic-ai/sdk@1.8.0/helpers/beta/zod";
 import { z } from "npm:zod@4.6.7";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const MODEL = "claude-opus-5-5";
 const MAX_SAMPLE_ROWS = 25;
@@ -19,6 +21,14 @@ const MAX_CELL = 160;
 const MAX_DESCRIPTIONS = 120;
 
 const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
+const auth = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "");
+
+async function signedInUser(req: Request): Promise<string | null> {
+  const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  const { data, error } = await auth.auth.getUser(token);
+  return error || !data.user ? null : data.user.id;
+}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -150,6 +160,7 @@ async function categorize(payload: Record<string, unknown>): Promise<Response> {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (!(await signedInUser(req))) return json({ error: "Sign in to use smart import." }, 401);
   if (!Deno.env.get("ANTHROPIC_API_KEY")) return json({ error: "AI is not configured on the server." }, 503);
 
   let payload: Record<string, unknown>;

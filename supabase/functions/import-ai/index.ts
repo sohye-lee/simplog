@@ -23,8 +23,22 @@ const MAX_CELL = 160;
 const MAX_DESCRIPTIONS = 120;
 const MAX_PDF_LINES = 150;
 
+// Usage limits — change them in Supabase → Edge Functions → Secrets
+// (AI_MONTHLY_IMPORTS, AI_CALLS_PER_IMPORT) without redeploying.
+const MONTHLY_IMPORTS = Number(Deno.env.get("AI_MONTHLY_IMPORTS") ?? "") || 5;
+const CALLS_PER_IMPORT = Number(Deno.env.get("AI_CALLS_PER_IMPORT") ?? "") || 20;
+
 const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
 const auth = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "");
+// Server-only: counts usage in public.ai_usage (no client access).
+const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function resetsOn(): string {
+  const d = new Date();
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
+}
 
 async function signedInUser(req: Request): Promise<string | null> {
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
@@ -215,14 +229,40 @@ async function categorize(payload: Record<string, unknown>): Promise<Response> {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
-  if (!(await signedInUser(req))) return json({ error: "Sign in to use smart import." }, 401);
-  if (!Deno.env.get("ANTHROPIC_API_KEY")) return json({ error: "AI is not configured on the server." }, 503);
+  const userId = await signedInUser(req);
+  if (!userId) return json({ error: "Sign in to use smart import." }, 401);
 
   let payload: Record<string, unknown>;
   try {
     payload = await req.json();
   } catch {
     return json({ error: "Invalid JSON" }, 400);
+  }
+
+  if (payload.action === "usage") {
+    const { data, error } = await admin.rpc("ai_used", { p_user: userId });
+    if (error) return json({ error: "Usage unavailable." }, 500);
+    return json({ used: data ?? 0, limit: MONTHLY_IMPORTS, resetsOn: resetsOn() });
+  }
+
+  if (!Deno.env.get("ANTHROPIC_API_KEY")) return json({ error: "AI is not configured on the server." }, 503);
+
+  // Every AI call is counted against its import run; a new run counts
+  // toward the monthly limit.
+  const importId = String(payload.importId ?? "");
+  if (!UUID.test(importId)) return json({ error: "Missing import id." }, 400);
+  const { data: verdict, error: usageError } = await admin.rpc("ai_use", {
+    p_user: userId, p_import: importId, p_monthly: MONTHLY_IMPORTS, p_calls: CALLS_PER_IMPORT,
+  });
+  if (usageError) return json({ error: "Smart import is unavailable right now." }, 500);
+  if (verdict === "monthly_limit") {
+    return json({
+      error: `You've used this month's ${MONTHLY_IMPORTS} smart imports. More on ${resetsOn()}.`,
+      code: "monthly_limit",
+    }, 429);
+  }
+  if (verdict === "import_limit") {
+    return json({ error: "This file is too large for one import. Try a shorter date range.", code: "import_limit" }, 429);
   }
 
   try {

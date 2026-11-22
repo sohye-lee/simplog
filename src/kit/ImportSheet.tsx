@@ -1,6 +1,6 @@
 // Statement import — pick a bank/card export, review what the AI made of
 // it, then import the checked rows. Nothing is saved until "Import".
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '../components/Button';
 import { IconButton } from '../components/IconButton';
 import { Icon } from '../components/Icon';
@@ -8,8 +8,8 @@ import { Amount } from '../components/Amount';
 import type { Currency, Entry, ImportMapping, MerchantRule } from '../lib/types';
 import { INCOME_CATS } from '../lib/data';
 import { fmtDay } from '../lib/months';
-import { readRows, detectFormat, buildRows, categorizeRows, extractPdfTransactions, toImportRows } from '../lib/importer';
-import type { ImportRow, ParsedFile } from '../lib/importer';
+import { readRows, detectFormat, buildRows, categorizeRows, extractPdfTransactions, toImportRows, startImportRun, fetchAIUsage } from '../lib/importer';
+import type { AIUsage, ImportRow, ParsedFile } from '../lib/importer';
 
 const isPdf = (f: File) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
 
@@ -43,14 +43,25 @@ export function ImportSheet(p: ImportSheetProps) {
   const [institution, setInstitution] = useState('Unknown');
   const fileRef = useRef<HTMLInputElement>(null);
   const lastFile = useRef<File | null>(null);
+  const [usage, setUsage] = useState<AIUsage | null>(null);
+  const [notice, setNotice] = useState('');
+
+  useEffect(() => {
+    if (!p.open) return;
+    let live = true;
+    fetchAIUsage().then((u) => { if (live) setUsage(u); }).catch(() => {});
+    return () => { live = false; };
+  }, [p.open]);
 
   if (!p.open) return null;
 
   const close = () => { setStage({ name: 'pick' }); setRows([]); setParsed(null); p.onClose(); };
 
   const run = async (file: File, force = false) => {
+    if (!force || lastFile.current !== file) startImportRun();   // "re-read" reuses the run
     lastFile.current = file;
     setFileName(file.name);
+    setNotice('');
     try {
       if (isPdf(file)) {
         setStage({ name: 'working', msg: 'Reading PDF…' });
@@ -61,7 +72,7 @@ export function ImportSheet(p: ImportSheetProps) {
         const built = toImportRows(txns, p.entries, p.merchantRules);
         const unknown = new Set(built.filter((r) => !r.category).map((r) => r.merchantKey)).size;
         setStage({ name: 'working', msg: unknown ? `Categorizing ${unknown} merchant${unknown === 1 ? '' : 's'}…` : 'Almost done…' });
-        setRows(await categorizeRows(built, p.categories, p.subcats));
+        setRows(await categorizeRows(built, p.categories, p.subcats, setNotice));
         setStage({ name: 'review' });
         return;
       }
@@ -76,7 +87,7 @@ export function ImportSheet(p: ImportSheetProps) {
       if (built.length === 0) throw new Error('No transactions found in this file.');
       const unknown = new Set(built.filter((r) => !r.category).map((r) => r.merchantKey)).size;
       setStage({ name: 'working', msg: unknown ? `Categorizing ${unknown} merchant${unknown === 1 ? '' : 's'}…` : 'Almost done…' });
-      setRows(await categorizeRows(built, p.categories, p.subcats));
+      setRows(await categorizeRows(built, p.categories, p.subcats, setNotice));
       setStage({ name: 'review' });
     } catch (e) {
       setStage({ name: 'error', msg: e instanceof Error ? e.message : 'Something went wrong.' });
@@ -157,6 +168,11 @@ export function ImportSheet(p: ImportSheetProps) {
             <Button variant="primary" size="lg" fullWidth onClick={() => fileRef.current?.click()} leadingIcon={<Icon name="file-down" size={18} />}>Choose file</Button>
             <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,.txt,.pdf,text/csv,application/pdf" style={{ display: 'none' }}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) run(f); e.target.value = ''; }} />
+            {usage && (
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                {Math.max(0, usage.limit - usage.used)} of {usage.limit} smart imports left this month · imports that need no AI (known format and merchants) don't count
+              </div>
+            )}
             <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
               CSV/Excel: the first time a bank's format is seen, its first rows are sent to an AI service to read the layout; merchant names are sent to suggest categories. Formats and merchants are remembered, so repeat imports stay on your device.
               PDF: the statement's transaction lines (date, description, amount — account numbers hidden) are sent to the AI each time. PDFs must come from your bank's website; scanned paper statements can't be read.
@@ -191,6 +207,9 @@ export function ImportSheet(p: ImportSheetProps) {
                 <Button variant="ghost" size="sm" onClick={() => lastFile.current && run(lastFile.current, true)}>{parsed ? 'Re-read format' : 'Re-read file'}</Button>
               </span>
             </div>
+            {notice && (
+              <div style={{ margin: '12px 24px 0', padding: '8px 12px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', background: 'var(--surface-inset)', borderRadius: 'var(--radius-sm)' }}>{notice}</div>
+            )}
             <div style={{ flex: 1, overflowY: 'auto', padding: '4px 24px' }}>
               {rows.map((r) => (
                 <div key={r.key} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: '1px solid var(--ink-100)', opacity: r.include ? 1 : 0.45 }}>

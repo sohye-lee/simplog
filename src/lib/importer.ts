@@ -36,19 +36,44 @@ export interface ParsedFile {
   fromCache: boolean;
 }
 
+export class AIError extends Error {
+  code?: string;
+  constructor(message: string, code?: string) { super(message); this.code = code; }
+}
+
+// All AI calls for one file share an import id; the server counts each new
+// id toward the user's monthly smart-import limit.
+let importRun = '';
+export function startImportRun(): void {
+  importRun = crypto.randomUUID();
+}
+
 // Call the import-ai edge function; surface the server's own error text.
 async function invokeAI<T>(body: Record<string, unknown>): Promise<T> {
-  if (!supabase) throw new Error('Sign in to use smart import.');
-  const { data, error } = await supabase.functions.invoke('import-ai', { body });
+  if (!supabase) throw new AIError('Sign in to use smart import.');
+  if (!importRun) startImportRun();
+  const { data, error } = await supabase.functions.invoke('import-ai', { body: { ...body, importId: importRun } });
   if (error) {
     let msg = 'Smart import is unavailable right now.';
+    let code: string | undefined;
     const ctx = (error as { context?: unknown }).context;
     if (ctx instanceof Response) {
-      try { const j = await ctx.json(); if (j?.error) msg = j.error; } catch { /* keep default */ }
+      try { const j = await ctx.json(); if (j?.error) msg = j.error; code = j?.code; } catch { /* keep default */ }
     }
-    throw new Error(msg);
+    throw new AIError(msg, code);
   }
   return data as T;
+}
+
+export interface AIUsage { used: number; limit: number; resetsOn: string }
+
+/** Smart imports used this month, or null when unknown (signed out / offline). */
+export async function fetchAIUsage(): Promise<AIUsage | null> {
+  if (!supabase) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return null;
+  const { data, error } = await supabase.functions.invoke('import-ai', { body: { action: 'usage' } });
+  return error || typeof data?.limit !== 'number' ? null : (data as AIUsage);
 }
 
 // ── 1. Reading ─────────────────────────────────────────────────────
@@ -367,6 +392,7 @@ export async function categorizeRows(
   rows: ImportRow[],
   categories: string[],
   subcats: Record<string, string[]>,
+  onNotice?: (msg: string) => void,
 ): Promise<ImportRow[]> {
   const todo = rows.filter((r) => !r.category);
   if (todo.length === 0 || !supabase) {
@@ -390,8 +416,13 @@ export async function categorizeRows(
         expenseCategories,
         incomeCategories: INCOME_CATS,
       });
-    } catch {
-      continue;   // categorizing is best-effort; rows fall back to "Other"
+    } catch (e) {
+      // Categorizing is best-effort; rows fall back to "Other".
+      if (e instanceof AIError && e.code) {
+        onNotice?.(`${e.message} Categories weren't suggested — pick them below.`);
+        break;
+      }
+      continue;
     }
     for (const res of data?.results ?? []) {
       const r = batch[res.index];

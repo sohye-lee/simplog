@@ -48,3 +48,53 @@ create policy "own settings — insert" on public.settings
   for insert with check (auth.uid() = user_id);
 create policy "own settings — update" on public.settings
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ── Smart-import AI usage ───────────────────────────────────────
+-- One row per import run (a run may make several AI calls: map,
+-- categorize, PDF chunks). Only the import-ai edge function touches this
+-- table, with the service role; clients have no policies, so no access.
+create table public.ai_usage (
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  import_id   uuid not null,
+  month       text not null,               -- 'YYYY-MM' (UTC)
+  calls       int  not null default 1,
+  created_at  timestamptz not null default now(),
+  primary key (user_id, import_id)
+);
+create index ai_usage_user_month_idx on public.ai_usage (user_id, month);
+alter table public.ai_usage enable row level security;
+
+-- Count one AI call. Returns 'ok', 'monthly_limit' (a new import would
+-- exceed p_monthly imports this month) or 'import_limit' (this import
+-- already made p_calls calls).
+create or replace function public.ai_use(p_user uuid, p_import uuid, p_monthly int, p_calls int)
+returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  m text := to_char(now() at time zone 'utc', 'YYYY-MM');
+  n int;
+begin
+  perform pg_advisory_xact_lock(hashtext(p_user::text));
+  select calls into n from ai_usage where user_id = p_user and import_id = p_import;
+  if found then
+    if n >= p_calls then return 'import_limit'; end if;
+    update ai_usage set calls = calls + 1 where user_id = p_user and import_id = p_import;
+    return 'ok';
+  end if;
+  select count(*) into n from ai_usage where user_id = p_user and month = m;
+  if n >= p_monthly then return 'monthly_limit'; end if;
+  insert into ai_usage (user_id, import_id, month) values (p_user, p_import, m);
+  return 'ok';
+end $$;
+revoke all on function public.ai_use(uuid, uuid, int, int) from public, anon, authenticated;
+grant execute on function public.ai_use(uuid, uuid, int, int) to service_role;
+
+-- Imports used this month (for the "N left" hint).
+create or replace function public.ai_used(p_user uuid)
+returns int
+language sql security definer set search_path = public as $$
+  select count(*)::int from ai_usage
+  where user_id = p_user and month = to_char(now() at time zone 'utc', 'YYYY-MM');
+$$;
+revoke all on function public.ai_used(uuid) from public, anon, authenticated;
+grant execute on function public.ai_used(uuid) to service_role;

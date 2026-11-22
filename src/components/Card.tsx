@@ -23,7 +23,7 @@ export function Card({
       style={{
         background: 'var(--surface-card)',
         border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--radius-card)',
         padding: pads[padding] != null ? pads[padding] : pads.md,
         boxShadow: elevated ? 'var(--shadow-md)' : 'none',
         ...style,

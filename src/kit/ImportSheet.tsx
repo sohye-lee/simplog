@@ -144,7 +144,7 @@ export function ImportSheet(p: ImportSheetProps) {
   );
 
   return (
-    <div onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(12,13,10,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 60, animation: 'slFade 160ms ease' }}>
+    <div onClick={close} style={{ position: 'fixed', inset: 0, background: 'var(--surface-scrim)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 60, animation: 'slFade 160ms ease' }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 720, height: stage.name === 'review' ? '92dvh' : 'auto', maxHeight: '92dvh', display: 'flex', flexDirection: 'column', background: 'var(--surface-card)', borderTopLeftRadius: 'var(--radius-lg)', borderTopRightRadius: 'var(--radius-lg)', border: '1px solid var(--border)', borderBottom: 'none', boxShadow: 'var(--shadow-lg)', animation: 'slRise 220ms var(--ease-out)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 12px' }}>
           <div style={{ minWidth: 0 }}>

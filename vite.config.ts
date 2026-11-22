@@ -18,8 +18,8 @@ export default defineConfig({
         short_name: 'SimplyLog',
         description: 'A deliberately minimal personal expense tracker.',
         display: 'standalone',
-        background_color: '#FBFBF6',
-        theme_color: '#FBFBF6',
+        background_color: '#F7F7F8',
+        theme_color: '#F7F7F8',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },

@@ -30,7 +30,7 @@ export function StatCard({
       gap: 10,
       padding: 'var(--space-5)',
       background: accent ? 'var(--accent-tint)' : 'var(--surface-card)',
-      border: `1px solid ${accent ? 'var(--lime-300)' : 'var(--border)'}`,
+      border: `1px solid ${accent ? 'var(--accent-line)' : 'var(--border)'}`,
       borderRadius: 'var(--radius-md)',
       minWidth: 0,
       containerType: 'inline-size',

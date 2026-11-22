@@ -158,7 +158,7 @@ export function AddSheet({ open, onClose, onAdd, categories, subcats, currency, 
   };
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(12,13,10,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50, animation: 'slFade 160ms ease' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--surface-scrim)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50, animation: 'slFade 160ms ease' }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 560, maxHeight: '90dvh', overflowY: 'auto', background: 'var(--surface-card)', borderTopLeftRadius: 'var(--radius-lg)', borderTopRightRadius: 'var(--radius-lg)', border: '1px solid var(--border)', borderBottom: 'none', boxShadow: 'var(--shadow-lg)', padding: 'var(--space-6)', paddingBottom: 'calc(var(--space-6) + env(safe-area-inset-bottom, 0px))', animation: 'slRise 220ms var(--ease-out)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>{editing ? 'Edit entry' : 'New entry'}</h3>

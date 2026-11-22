@@ -54,14 +54,14 @@ export function Amount({
       fontSize: s.fontSize,
       fontWeight: s.weight,
       color,
-      fontVariantNumeric: 'tabular-nums slashed-zero',
+      fontVariantNumeric: 'tabular-nums',
       letterSpacing: 'var(--tracking-tight)',
       whiteSpace: 'nowrap',
       lineHeight: 1,
       ...style,
     }}>
       {sign}
-      <span style={{ fontSize: `${s.symScale}em`, color: 'var(--text-muted)', marginRight: '0.15em', fontWeight: 400 }}>{sym}</span>
+      <span style={{ fontSize: `${s.symScale}em`, color: emphasis === 'accent' ? 'inherit' : 'var(--text-secondary)', marginRight: '0.05em', fontWeight: s.weight }}>{sym}</span>
       {formatted}
     </span>
   );

@@ -34,14 +34,15 @@ export function Button({
 
   const variants: Record<string, CSSProperties> = {
     primary: {
-      background: 'var(--accent)',
-      color: 'var(--text-on-accent)',
-      border: '1px solid var(--accent)',
+      background: 'var(--action)',
+      color: 'var(--text-on-action)',
+      border: '1px solid var(--action)',
     },
     secondary: {
       background: 'var(--surface-card)',
       color: 'var(--text-primary)',
-      border: '1px solid var(--border-strong)',
+      border: '1px solid var(--border)',
+      boxShadow: 'var(--shadow-xs)',
     },
     ghost: {
       background: 'transparent',
@@ -50,7 +51,7 @@ export function Button({
     },
     dark: {
       background: 'var(--ink-900)',
-      color: 'var(--text-inverse)',
+      color: 'var(--text-on-action)',
       border: '1px solid var(--ink-900)',
     },
   };
@@ -71,7 +72,7 @@ export function Button({
         fontFamily: 'var(--font-mono)',
         fontSize: s.fontSize,
         fontWeight: 500,
-        letterSpacing: '0.01em',
+        letterSpacing: '-0.005em',
         lineHeight: 1,
         borderRadius: 'var(--radius-md)',
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -86,17 +87,17 @@ export function Button({
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
         if (disabled) return;
-        if (variant === 'primary') e.currentTarget.style.background = 'var(--accent)';
+        if (variant === 'primary') e.currentTarget.style.background = 'var(--action)';
         if (variant === 'ghost') e.currentTarget.style.background = 'transparent';
         if (variant === 'secondary') e.currentTarget.style.background = 'var(--surface-card)';
         if (variant === 'dark') e.currentTarget.style.background = 'var(--ink-900)';
       }}
       onMouseEnter={(e) => {
         if (disabled) return;
-        if (variant === 'primary') e.currentTarget.style.background = 'var(--accent-hover)';
+        if (variant === 'primary') e.currentTarget.style.background = 'var(--action-hover)';
         if (variant === 'ghost') e.currentTarget.style.background = 'var(--surface-inset)';
         if (variant === 'secondary') e.currentTarget.style.background = 'var(--surface-sunken)';
-        if (variant === 'dark') e.currentTarget.style.background = 'var(--ink-800)';
+        if (variant === 'dark') e.currentTarget.style.background = 'var(--action-hover)';
       }}
       {...rest}
     >

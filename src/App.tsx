@@ -31,15 +31,15 @@ const NAV: Array<{ id: Page; label: string; icon: IconName }> = [
 
 function NavTabs({ page, onNav }: { page: Page; onNav: (page: Page) => void }) {
   return (
-    <nav style={{ display: 'flex', gap: 2 }}>
+    <nav className="sl-topnav" style={{ display: 'flex', gap: 2 }}>
       {NAV.map((n) => {
         const active = page === n.id;
         return (
           <button key={n.id} onClick={() => onNav(n.id)} aria-label={n.label} style={{
             display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 12px',
-            border: 'none', background: active ? 'var(--surface-inset)' : 'transparent', borderRadius: 'var(--radius-sm)',
-            cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)',
-            fontWeight: active ? 600 : 500, color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+            border: 'none', background: active ? 'var(--surface-inset)' : 'transparent', borderRadius: 'var(--radius-pill)',
+            cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)',
+            fontWeight: 500, color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
             transition: 'background 120ms, color 120ms',
           }}>
             <Icon name={n.icon} size={16} />
@@ -51,14 +51,37 @@ function NavTabs({ page, onNav }: { page: Page; onNav: (page: Page) => void }) {
   );
 }
 
+// Phones: app-style tab bar at the bottom instead of the header nav.
+function TabBar({ page, onNav }: { page: Page; onNav: (page: Page) => void }) {
+  return (
+    <nav className="sl-tabbar" aria-label="Main">
+      {NAV.map((n) => {
+        const active = page === n.id;
+        return (
+          <button key={n.id} onClick={() => onNav(n.id)} aria-current={active ? 'page' : undefined} style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '8px 0 6px',
+            border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+            fontSize: 11, fontWeight: 500, color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+          }}>
+            <span style={{ display: 'inline-flex', padding: '4px 16px', borderRadius: 'var(--radius-pill)', background: active ? 'var(--accent-tint)' : 'transparent', color: active ? 'var(--text-accent)' : 'inherit', transition: 'background 150ms' }}>
+              <Icon name={n.icon} size={20} />
+            </span>
+            {n.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 function Logo() {
   return (
     <svg width="28" height="28" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-      <rect x="4" y="4" width="56" height="56" rx="15" fill="#CCF017" />
-      <rect x="20" y="13" width="24" height="13" rx="3" fill="#FBFBF6" />
-      <rect x="12" y="21" width="40" height="30" rx="7" fill="#0C0D0A" />
-      <rect x="40" y="31" width="13" height="10" rx="3.2" fill="#CCF017" />
-      <circle cx="46.5" cy="36" r="2" fill="#0C0D0A" />
+      <rect x="4" y="4" width="56" height="56" rx="15" fill="#0FB5A0" />
+      <rect x="20" y="13" width="24" height="13" rx="3" fill="#FFFFFF" />
+      <rect x="12" y="21" width="40" height="30" rx="7" fill="#18181B" />
+      <rect x="40" y="31" width="13" height="10" rx="3.2" fill="#0FB5A0" />
+      <circle cx="46.5" cy="36" r="2" fill="#18181B" />
     </svg>
   );
 }
@@ -305,18 +328,18 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--surface-page)' }}>
-      <header style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-card)', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ maxWidth: 'var(--container-max)', margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      <header className="sl-header">
+        <div style={{ maxWidth: 'var(--container-max)', margin: '0 auto', padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <Logo />
-            <span style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.01em' }}>SimplyLog</span>
+            <span style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em' }}>SimplyLog</span>
           </div>
           <NavTabs page={page} onNav={(p) => patch({ page: p })} />
         </div>
       </header>
 
-      <main style={{ maxWidth: 'var(--container-max)', margin: '0 auto', padding: '24px 24px 96px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+      <main className="sl-main">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <MonthStepper label={monthLabel(month)} onPrev={() => setMonth((m) => shiftMonth(m, -1))} onNext={() => setMonth((m) => shiftMonth(m, 1))} />
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{monthEntries.length} entries</span>
         </div>
@@ -371,9 +394,10 @@ export default function App() {
 
       {page !== 'export' && page !== 'settings' && (
         <div className="sl-fab">
-          <Button variant="primary" size="lg" onClick={() => setSheet(true)} leadingIcon={<Icon name="plus" size={20} />} style={{ boxShadow: 'var(--shadow-md)' }}>Add</Button>
+          <Button variant="primary" size="lg" onClick={() => setSheet(true)} leadingIcon={<Icon name="plus" size={20} />} style={{ boxShadow: 'var(--shadow-lg)', borderRadius: 'var(--radius-pill)', padding: '13px 22px 13px 18px' }}>Add</Button>
         </div>
       )}
+      <TabBar page={page} onNav={(p) => patch({ page: p })} />
 
       <AddSheet open={sheet} onClose={closeSheet} onAdd={submitEntry} categories={categories} subcats={subcats} currency={currency} entries={entries} editing={editing} />
       <ImportSheet open={importOpen} onClose={() => setImportOpen(false)} onImport={onStatementImport}

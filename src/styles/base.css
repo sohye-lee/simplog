@@ -8,7 +8,7 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--text-md);
   line-height: var(--leading-normal);
   color: var(--text-primary);
@@ -19,9 +19,9 @@ body {
 }
 
 /* Tabular numbers everywhere by default — this is a ledger */
-body { font-variant-numeric: tabular-nums slashed-zero; }
+body { font-variant-numeric: tabular-nums; }
 
-h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: var(--weight-semibold); line-height: var(--leading-tight); }
+h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: var(--weight-semibold); line-height: var(--leading-tight); letter-spacing: var(--tracking-tight); }
 
 p { margin: 0; }
 
@@ -32,19 +32,25 @@ a {
   text-underline-offset: 3px;
   transition: text-decoration-color var(--dur-fast) var(--ease-standard);
 }
-a:hover { text-decoration-color: var(--lime-600); }
+a:hover { text-decoration-color: var(--teal-500); }
 
 button { font-family: inherit; }
 
-::selection { background: var(--lime-300); color: var(--ink-900); }
+::selection { background: var(--teal-100); color: var(--ink-900); }
 
-/* Overline / eyebrow label utility */
+/* Small label utility (sentence case — calm, not shouty) */
 .overline {
-  font-size: var(--text-xs);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--text-muted);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
   font-weight: var(--weight-medium);
+}
+
+/* Section title inside cards */
+.sl-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 /* ── App-level bits ─────────────────────────────────────────── */
@@ -67,9 +73,34 @@ button { font-family: inherit; }
   .sl-summary { grid-template-columns: 1fr; }
 }
 
-/* Header nav: icons-only under 600px */
+/* ── Shell: translucent sticky header, main column, phone tab bar ── */
+.sl-header {
+  position: sticky; top: 0; z-index: 10;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: color-mix(in srgb, var(--surface-page) 82%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  backdrop-filter: saturate(180%) blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.sl-main {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 20px 20px 112px;
+}
+.sl-tabbar { display: none; }
+
 @media (max-width: 600px) {
-  .sl-nav-label { display: none; }
+  .sl-topnav { display: none !important; }
+  .sl-main { padding: 16px 16px calc(150px + env(safe-area-inset-bottom, 0px)); }
+  .sl-tabbar {
+    display: flex;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    padding: 2px 8px env(safe-area-inset-bottom, 0px);
+    background: color-mix(in srgb, var(--surface-card) 88%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    backdrop-filter: saturate(180%) blur(16px);
+    border-top: 1px solid var(--border);
+  }
 }
 
 /* Entry rows: delete button reveals on hover; always visible on touch */
@@ -92,4 +123,10 @@ button { font-family: inherit; }
   bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   bottom: calc(100lvh - 100dvh + 24px + env(safe-area-inset-bottom, 0px));
   z-index: 20;
+}
+@media (max-width: 600px) {
+  .sl-fab {
+    right: 16px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
 }

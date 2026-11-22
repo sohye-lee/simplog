@@ -68,7 +68,7 @@ export function ExportPage({ entries, monthLabel, onExport, onImport }: ExportPa
         <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {['Date', 'Kind (income / expense)', 'Category & subcategory', 'Note', 'Amount (signed)'].map((c) => (
             <div key={c} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ color: 'var(--lime-700)' }}><Icon name="check" size={15} /></span>{c}
+              <span style={{ color: 'var(--text-accent)' }}><Icon name="check" size={15} /></span>{c}
             </div>
           ))}
         </div>

@@ -2,18 +2,16 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Amount } from '../components/Amount';
-import { StatCard } from '../components/StatCard';
-import { CategoryBadge } from '../components/CategoryBadge';
 import { IconButton } from '../components/IconButton';
 import { Icon } from '../components/Icon';
 import type { Currency, Entry } from '../lib/types';
 import { fmtDay } from '../lib/months';
 
-// ── Overline section header ──────────────────────────────────────
+// ── Card section header ──────────────────────────────────────────
 export function SectionHeader({ title, right }: { title: string; right?: ReactNode }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-      <span className="overline">{title}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, minHeight: 28 }}>
+      <span className="sl-title">{title}</span>
       {right}
     </div>
   );
@@ -23,20 +21,39 @@ export function SectionHeader({ title, right }: { title: string; right?: ReactNo
 export function MonthStepper({ label, onPrev, onNext }: { label: string; onPrev: () => void; onNext: () => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <IconButton label="Previous month" variant="outline" onClick={onPrev}><Icon name="chevron-left" /></IconButton>
-      <span style={{ fontSize: 'var(--text-xl)', fontWeight: 600, minWidth: 150, textAlign: 'center' }}>{label}</span>
-      <IconButton label="Next month" variant="outline" onClick={onNext}><Icon name="chevron-right" /></IconButton>
+      <IconButton label="Previous month" onClick={onPrev}><Icon name="chevron-left" /></IconButton>
+      <span style={{ fontSize: 'var(--text-xl)', fontWeight: 600, letterSpacing: '-0.02em', minWidth: 150, textAlign: 'center' }}>{label}</span>
+      <IconButton label="Next month" onClick={onNext}><Icon name="chevron-right" /></IconButton>
     </div>
   );
 }
 
-// ── Summary strip: Income / Spent / Left ─────────────────────────
+// ── Month summary: Spent as the hero, Income / Left beneath ──────
 export function SummaryStrip({ income, spent, currency }: { income: number; spent: number; currency: Currency }) {
+  const left = income - spent;
+  const pct = income ? Math.min(100, (spent / income) * 100) : 0;
   return (
-    <div className="sl-summary">
-      <StatCard label="Income" value={income} currency={currency} />
-      <StatCard label="Spent" value={spent} currency={currency} delta={income ? Math.round((spent / income) * 100) + '% of income' : '—'} />
-      <StatCard label="Left" value={income - spent} currency={currency} accent />
+    <div style={{ background: 'var(--surface-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', padding: '20px 20px 18px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+        <span className="overline">Spent this month</span>
+        {income > 0 && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{Math.round((spent / income) * 100)}% of income</span>}
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <Amount value={spent} size="xl" currency={currency} />
+      </div>
+      <div role="presentation" style={{ height: 8, marginTop: 18, background: 'var(--surface-inset)', borderRadius: 'var(--radius-pill)', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: spent > income && income > 0 ? 'var(--ink-900)' : 'var(--accent)', borderRadius: 'var(--radius-pill)', transition: 'width 400ms var(--ease-out)' }} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', marginTop: 16, gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Income</span>
+          <Amount value={income} size="md" currency={currency} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, paddingLeft: 12, borderLeft: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Left</span>
+          <Amount value={left} size="md" currency={currency} emphasis={left > 0 ? 'accent' : 'normal'} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -66,7 +83,7 @@ export function CategoryBreakdown({ byCategory, bySubcat, total, currency, twoLe
           <div key={cat}>
             <div
               onClick={() => canExpand && setOpen((o) => ({ ...o, [cat]: !o[cat] }))}
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, cursor: canExpand ? 'pointer' : 'default' }}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, cursor: canExpand ? 'pointer' : 'default' }}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 {canExpand && (
@@ -74,14 +91,14 @@ export function CategoryBreakdown({ byCategory, bySubcat, total, currency, twoLe
                     <Icon name="chevron-right" size={13} />
                   </span>
                 )}
-                <CategoryBadge>{cat}</CategoryBadge>
+                <span style={{ fontSize: 'var(--text-md)', fontWeight: 500 }}>{cat}</span>
               </span>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{total ? Math.round((amt / total) * 100) : 0}%</span>
                 <Amount value={amt} size="sm" currency={currency} />
               </div>
             </div>
-            <div style={{ height: 6, background: 'var(--surface-inset)', borderRadius: 'var(--radius-pill)', overflow: 'hidden' }}>
+            <div style={{ height: 5, background: 'var(--surface-inset)', borderRadius: 'var(--radius-pill)', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: (total ? (amt / total) * 100 : 0) + '%', background: 'var(--accent)', borderRadius: 'var(--radius-pill)', transition: 'width 260ms var(--ease-out)' }} />
             </div>
             {canExpand && isOpen && (
@@ -109,16 +126,19 @@ export function EntryRow({ entry, onDelete, onEdit, currency }: { entry: Entry; 
     <div
       className="sl-entry-row"
       onClick={() => onEdit?.(entry)}
-      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 4px', borderBottom: '1px solid var(--ink-100)', cursor: onEdit ? 'pointer' : 'default' }}
+      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--ink-100)', cursor: onEdit ? 'pointer' : 'default' }}
     >
-      <div style={{ width: 46, flexShrink: 0, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.2 }}>
-        {fmtDay(entry.date)}
+      <div aria-hidden="true" style={{
+        width: 40, height: 40, flexShrink: 0, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: income ? 'var(--accent-tint)' : 'var(--surface-inset)', color: income ? 'var(--text-accent)' : 'var(--ink-600)',
+        fontSize: 15, fontWeight: 600,
+      }}>
+        {(entry.category.trim()[0] || '·').toUpperCase()}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 'var(--text-md)', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.note}</div>
-        <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <CategoryBadge size="sm" dot={!income}>{entry.category}</CategoryBadge>
-          {entry.sub && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{entry.sub}</span>}
+        <div style={{ fontSize: 'var(--text-md)', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.note}</div>
+        <div style={{ marginTop: 2, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {[entry.category, entry.sub, fmtDay(entry.date)].filter(Boolean).join(' · ')}
         </div>
       </div>
       <Amount value={income ? entry.amount : -entry.amount} size="sm" signed={income} emphasis={income ? 'accent' : 'normal'} currency={currency} />
@@ -133,7 +153,7 @@ export function EntryRow({ entry, onDelete, onEdit, currency }: { entry: Entry; 
 export function EmptyState({ line, hint }: { line: string; hint?: string }) {
   return (
     <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, color: 'var(--text-secondary)', marginBottom: 6 }}>{line}</div>
+      <div style={{ fontSize: 'var(--text-md)', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>{line}</div>
       {hint && <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>{hint}</div>}
     </div>
   );

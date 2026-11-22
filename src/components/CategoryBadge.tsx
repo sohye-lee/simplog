@@ -3,7 +3,7 @@ import type { CSSProperties, HTMLAttributes } from 'react';
 /**
  * CategoryBadge — a compact chip labelling a spend category. SimplyLog
  * stays monotone, so categories are told apart by their short label
- * and a small ink dot, not by color. `selected` fills it with lime.
+ * and a small ink dot, not by color. `selected` fills it with ink.
  */
 export interface CategoryBadgeProps extends HTMLAttributes<HTMLSpanElement> {
   selected?: boolean;
@@ -30,12 +30,12 @@ export function CategoryBadge({
         height: h,
         padding: size === 'sm' ? '0 8px' : '0 10px',
         borderRadius: 'var(--radius-pill)',
-        background: selected ? 'var(--accent)' : 'var(--surface-inset)',
-        border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
-        color: selected ? 'var(--text-on-accent)' : 'var(--text-secondary)',
+        background: selected ? 'var(--action)' : 'var(--surface-inset)',
+        border: `1px solid ${selected ? 'var(--action)' : 'transparent'}`,
+        color: selected ? 'var(--text-on-action)' : 'var(--text-secondary)',
         fontSize: size === 'sm' ? 'var(--text-xs)' : 'var(--text-sm)',
         fontWeight: 500,
-        letterSpacing: '0.01em',
+        letterSpacing: 0,
         whiteSpace: 'nowrap',
         ...style,
       }}

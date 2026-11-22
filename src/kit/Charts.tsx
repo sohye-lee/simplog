@@ -1,4 +1,4 @@
-// Charts — hand-rolled SVG, monotone ink + one lime accent.
+// Charts — hand-rolled SVG, monotone ink + one teal accent.
 // Range: Month / YTD / trailing 1Y. Share = category donut;
 // Trend = daily bars (month) or monthly bars (year ranges).
 import { useMemo, useState } from 'react';
@@ -11,8 +11,8 @@ import type { Currency, Entry, Kind } from '../lib/types';
 
 type Range = 'month' | 'ytd' | '1y';
 
-// Largest slice gets the lime; the rest descend through the ink ramp.
-const SLICE_COLORS = ['var(--lime-500)', 'var(--ink-900)', 'var(--ink-600)', 'var(--ink-400)', 'var(--ink-300)', 'var(--ink-200)'];
+// Largest slice gets the teal; the rest descend through the ink ramp.
+const SLICE_COLORS = ['var(--teal-500)', 'var(--ink-900)', 'var(--ink-600)', 'var(--ink-400)', 'var(--ink-300)', 'var(--ink-200)'];
 
 function polar(cx: number, cy: number, r: number, angle: number): [number, number] {
   const rad = ((angle - 90) * Math.PI) / 180;
@@ -49,7 +49,7 @@ function Donut({ byCategory, total, currency }: { byCategory: Record<string, num
           }
           return <path key={cat} d={arcPath(cx, cy, r, start, end)} fill="none" stroke={SLICE_COLORS[i % SLICE_COLORS.length]} strokeWidth={stroke} />;
         })}
-        <text x={cx} y={cy - 4} textAnchor="middle" style={{ font: '500 11px var(--font-mono)', fill: 'var(--ink-400)', letterSpacing: '0.08em' }}>TOTAL</text>
+        <text x={cx} y={cy - 4} textAnchor="middle" style={{ font: '500 11px var(--font-mono)', fill: 'var(--ink-400)', }}>Total</text>
         <text x={cx} y={cy + 16} textAnchor="middle" style={{ font: '600 15px var(--font-mono)', fill: 'var(--ink-900)' }}>
           {Math.round(total).toLocaleString('en-US')}
         </text>
@@ -86,7 +86,7 @@ function Bars({ buckets, peakLabel, currency }: { buckets: Bucket[]; peakLabel: 
           const isPeak = i === peakIdx && b.value > 0;
           return (
             <rect key={i} x={PAD + i * bw + 1.5} y={H - Math.max(h, 2)} width={Math.max(bw - 3, 2)} height={Math.max(h, 2)}
-              rx={1.5} fill={b.value === 0 ? 'var(--ink-100)' : isPeak ? 'var(--lime-500)' : 'var(--ink-900)'} />
+              rx={1.5} fill={b.value === 0 ? 'var(--ink-100)' : isPeak ? 'var(--teal-500)' : 'var(--ink-900)'} />
           );
         })}
         {buckets.map((b, i) => b.showLabel && (

@@ -5,7 +5,7 @@ export type SegmentOption = string | { value: string; label: string };
 /**
  * Segmented control — the SimplyLog toggle for small mutually-exclusive
  * choices (Income / Expense, format pickers). The active segment gets
- * the lime fill.
+ * a raised white pill.
  */
 export interface SegmentedControlProps {
   options?: SegmentOption[];
@@ -50,14 +50,14 @@ export function SegmentedControl({
               height: h,
               padding: '0 16px',
               border: 'none',
-              borderRadius: 'var(--radius-xs)',
+              borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
               fontFamily: 'var(--font-mono)',
               fontSize: size === 'sm' ? 'var(--text-sm)' : 'var(--text-md)',
-              fontWeight: active ? 600 : 500,
-              background: active ? 'var(--accent)' : 'transparent',
-              color: active ? 'var(--text-on-accent)' : 'var(--text-secondary)',
-              boxShadow: active ? 'var(--shadow-xs)' : 'none',
+              fontWeight: 500,
+              background: active ? 'var(--surface-card)' : 'transparent',
+              color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+              boxShadow: active ? 'var(--shadow-sm)' : 'none',
               transition: 'background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard)',
               whiteSpace: 'nowrap',
             }}

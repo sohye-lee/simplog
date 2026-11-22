@@ -76,12 +76,12 @@ export function parseBackup(text: string): AppState | null {
 // Uses NanumGothic Coding (monospace, Korean-capable) so notes and
 // categories typed in Korean render correctly.
 
-const INK = '#0C0D0A';
-const INK_MUTED = '#9A9C90';
-const INK_SECONDARY = '#6B6D62';
-const LIME = '#CCF017';
-const BORDER = '#E3E4DC';
-const SUNKEN = '#F7F7F2';
+const INK = '#18181B';
+const INK_MUTED = '#A1A1AA';
+const INK_SECONDARY = '#71717A';
+const LIME = '#0FB5A0';
+const BORDER = '#E4E4E7';
+const SUNKEN = '#F7F7F8';
 
 async function fetchFontBase64(url: string): Promise<string> {
   const buf = await (await fetch(url)).arrayBuffer();

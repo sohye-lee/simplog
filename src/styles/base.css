@@ -4,7 +4,12 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  /* Reserve the scrollbar's width so tabs and filtered lists that are too
+     short to scroll don't shift the centered column sideways */
+  scrollbar-gutter: stable;
+}
 
 body {
   margin: 0;

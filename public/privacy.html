@@ -6,36 +6,32 @@
   <title>Privacy Policy — SimplyLog</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:wght@400&display=swap');
-    :root {
-      --ink-900:#0C0D0A; --ink-500:#6B6D62; --ink-200:#E3E4DC; --paper:#FBFBF6; --lime:#CCF017;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    :root { --ink-900:#18181B; --ink-700:#3F3F46; --ink-500:#71717A; --ink-200:#E4E4E7; --paper:#F7F7F8; --card:#FFFFFF; --teal:#0B7A6C; color-scheme:light dark; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink-900:#F4F4F5; --ink-700:#D4D4D8; --ink-500:#A1A1AA; --ink-200:#2E2E33; --paper:#0E0E10; --card:#18181B; --teal:#4FD8C3; }
     }
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { background:var(--paper); color:var(--ink-900); font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace; line-height:1.6; -webkit-font-smoothing:antialiased; }
-    .wrap { max-width:720px; margin:0 auto; padding:48px 24px 96px; }
-    .brand { display:flex; align-items:center; gap:10px; margin-bottom:40px; }
-    .brand span { font-size:18px; font-weight:600; letter-spacing:-0.01em; }
-    h1 { font-size:28px; font-weight:600; letter-spacing:-0.01em; margin-bottom:6px; }
+    body { background:var(--paper); color:var(--ink-900); font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased; }
+    .wrap { max-width:720px; margin:0 auto; padding:48px 20px 96px; }
+    .brand { display:flex; align-items:center; gap:10px; margin-bottom:40px; text-decoration:none; color:inherit; }
+    .brand span { font-size:18px; font-weight:600; letter-spacing:-0.02em; }
+    h1 { font-size:30px; font-weight:600; letter-spacing:-0.02em; margin-bottom:6px; }
     .updated { color:var(--ink-500); font-size:13px; margin-bottom:32px; }
-    h2 { font-size:16px; font-weight:600; margin:32px 0 10px; }
-    p, li { font-size:15px; color:#2C2E27; margin-bottom:10px; }
-    ul { padding-left:22px; }
-    a { color:#94B006; }
-    .lead { font-family:'IBM Plex Serif',Georgia,serif; font-size:18px; color:var(--ink-500); margin-bottom:8px; }
+    h2 { font-size:17px; font-weight:600; letter-spacing:-0.01em; margin:32px 0 10px; }
+    p, li { font-size:15px; color:var(--ink-700); margin-bottom:10px; }
+    ul, ol { padding-left:22px; }
+    a { color:var(--teal); }
+    .lead { font-size:18px; color:var(--ink-500); margin-bottom:8px; }
     hr { border:none; border-top:1px solid var(--ink-200); margin:32px 0; }
     .foot { color:var(--ink-500); font-size:13px; margin-top:40px; }
+    .card { background:var(--card); border:1px solid var(--ink-200); border-radius:16px; padding:20px; margin:16px 0; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="brand">
-      <svg width="28" height="28" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-        <rect x="4" y="4" width="56" height="56" rx="15" fill="#CCF017"/>
-        <rect x="20" y="13" width="24" height="13" rx="3" fill="#FBFBF6"/>
-        <rect x="12" y="21" width="40" height="30" rx="7" fill="#0C0D0A"/>
-        <rect x="40" y="31" width="13" height="10" rx="3.2" fill="#CCF017"/>
-        <circle cx="46.5" cy="36" r="2" fill="#0C0D0A"/>
-      </svg>
+      <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="33.19" cy="32" rx="17.4" ry="26" fill="#0E8676"/><rect x="30.81" y="6" width="2.38" height="52" fill="#0E8676"/><path d="M31.72 6.04H34.1M32.63 6.14H35.01M33.53 6.32H35.91M34.43 6.57H36.81M35.31 6.89H37.69M36.19 7.27H38.57M37.05 7.73H39.42M37.89 8.25H40.27M38.71 8.83H41.09M39.51 9.48H41.89M40.29 10.19H42.66M41.04 10.97H43.41M41.76 11.79H44.14M42.45 12.68H44.83M43.11 13.62H45.49M43.74 14.6H46.12M44.33 15.64H46.71M44.89 16.72H47.26M45.4 17.84H47.78M45.88 19H48.26M46.31 20.2H48.69M46.7 21.42H49.08M47.05 22.68H49.43M47.36 23.97H49.73M47.62 25.27H49.99M47.83 26.59H50.21M47.99 27.93H50.37M48.11 29.28H50.49M48.18 30.64H50.56M48.21 32H50.59M48.18 33.36H50.56M48.11 34.72H50.49M47.99 36.07H50.37M47.83 37.41H50.21M47.62 38.73H49.99M47.36 40.03H49.73M47.05 41.32H49.43M46.7 42.58H49.08M46.31 43.8H48.69M45.88 45H48.26M45.4 46.16H47.78M44.89 47.28H47.26M44.33 48.36H46.71M43.74 49.4H46.12M43.11 50.38H45.49M42.45 51.32H44.83M41.76 52.21H44.14M41.04 53.03H43.41M40.29 53.81H42.66M39.51 54.52H41.89M38.71 55.17H41.09M37.89 55.75H40.27M37.05 56.27H39.42M36.19 56.73H38.57M35.31 57.11H37.69M34.43 57.43H36.81M33.53 57.68H35.91M32.63 57.86H35.01M31.72 57.96H34.1M30.81 58H33.19" stroke="#075247" stroke-width="0.45" fill="none"/><ellipse cx="30.81" cy="32" rx="17.4" ry="26" fill="rgb(14,171,151)"/><ellipse cx="30.81" cy="32" rx="15.32" ry="22.9" fill="none" stroke="rgba(255,255,255,0.32)" stroke-width="0.7"/></svg>
       <span>SimplyLog</span>
     </div>
 

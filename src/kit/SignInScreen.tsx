@@ -2,19 +2,14 @@
 // configured and there's no session.
 import { Card } from '../components/Card';
 import { AuthForm } from './AuthForm';
+import { CoinLogo } from '../components/CoinLogo';
 
 export function SignInScreen() {
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--surface-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 28 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
-          <svg width="56" height="56" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-            <rect x="4" y="4" width="56" height="56" rx="15" fill="#0FB5A0" />
-            <rect x="20" y="13" width="24" height="13" rx="3" fill="#FFFFFF" />
-            <rect x="12" y="21" width="40" height="30" rx="7" fill="#18181B" />
-            <rect x="40" y="31" width="13" height="10" rx="3.2" fill="#0FB5A0" />
-            <circle cx="46.5" cy="36" r="2" fill="#18181B" />
-          </svg>
+          <CoinLogo size={64} />
           <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, letterSpacing: '-0.01em' }}>SimplyLog</div>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: 17, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             Know exactly where your <span style={{ color: 'var(--text-accent)' }}>money</span> went this month.

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from './components/Button';
 import { Icon } from './components/Icon';
+import { CoinLogo } from './components/CoinLogo';
 import type { IconName } from './components/Icon';
 import { MonthStepper } from './kit/pieces';
 import { AddSheet } from './kit/AddSheet';
@@ -75,15 +76,7 @@ function TabBar({ page, onNav }: { page: Page; onNav: (page: Page) => void }) {
 }
 
 function Logo() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-      <rect x="4" y="4" width="56" height="56" rx="15" fill="#0FB5A0" />
-      <rect x="20" y="13" width="24" height="13" rx="3" fill="#FFFFFF" />
-      <rect x="12" y="21" width="40" height="30" rx="7" fill="#18181B" />
-      <rect x="40" y="31" width="13" height="10" rx="3.2" fill="#0FB5A0" />
-      <circle cx="46.5" cy="36" r="2" fill="#18181B" />
-    </svg>
-  );
+  return <CoinLogo size={30} />;
 }
 
 type AuthPhase = 'loading' | 'out' | 'in' | 'local';
